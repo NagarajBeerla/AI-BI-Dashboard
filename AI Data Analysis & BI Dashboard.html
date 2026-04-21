@@ -279,15 +279,21 @@
       <div id="upload-sec" style="display: block;" class="fade-in">
         <div class="card" style="padding:4rem 2rem;">
           <div class="drop-zone" id="drop-zone" onclick="document.getElementById('fi').click()">
-            <input type="file" id="fi" accept=".csv,.xlsx,.xls,.json,.tsv,.txt" style="display:none">
+            <input type="file" id="fi" accept=".csv,.xlsx,.xls,.json,.tsv,.txt" multiple style="display:none">
             <div class="drop-icon">📂</div>
-            <div class="drop-title">Drop your data file here</div>
-            <div class="drop-sub">Drag and drop or click to browse</div>
+            <div class="drop-title">Drop your data files here</div>
+            <div class="drop-sub">Drag and drop or click to browse (Multiple files supported)</div>
             <div class="format-badges">
               <span class="fmt-badge" style="background:var(--green-bg);color:var(--green);">CSV</span>
               <span class="fmt-badge" style="background:var(--accent-glow);color:var(--accent);">XLSX / XLS</span>
               <span class="fmt-badge" style="background:var(--amber-bg);color:var(--amber);">JSON</span>
             </div>
+          </div>
+          
+          <div id="staging-area" style="display:none; margin-top:1.5rem; background:rgba(0,0,0,0.2); padding:1rem; border-radius:var(--radius); border:1px dashed var(--border2);">
+            <div style="font-family:var(--font-header);font-size:14px;color:var(--accent);margin-bottom:10px;">Staged Tables:</div>
+            <div id="staged-list" style="display:flex; flex-direction:column; gap:6px; margin-bottom:14px;"></div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;" onclick="showQuestion()">Confirm & Proceed to Analysis →</button>
           </div>
         </div>
 
@@ -407,7 +413,7 @@
   <script>
 
     // ── State ──
-    let csvData = null, fName = '', charts = [], lastQ = '', apiKey = '';
+    let datasets = [], fName = '', charts = [], lastQ = '', apiKey = '';
     const PAL = ['#6c8ef5', '#34c77b', '#f5a623', '#f56565', '#a78bfa', '#22d3ee', '#fb7185', '#84cc16', '#f97316', '#06b6d4'];
     const KPI_COLORS = ['kpi-accent', 'kpi-green', 'kpi-amber', 'kpi-cyan', 'kpi-red', 'kpi-accent'];
 
@@ -485,18 +491,17 @@
       document.getElementById('file-icon-el').textContent = icons[ext] || '📄';
     }
 
-    function parseXLSX(buf) {
+    function parseXLSX(buf, fname) {
       try {
         const wb = XLSX.read(buf, { type: 'array' });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
         if (!json.length) { showUploadError('Excel sheet appears empty'); return; }
-        csvData = { data: json, meta: { fields: Object.keys(json[0]) } };
-        showQuestion();
+        addDataset(fname, json, Object.keys(json[0]));
       } catch (e) { showUploadError('Failed to parse Excel: ' + e.message); }
     }
 
-    function parseJSON(raw) {
+    function parseJSON(raw, fname) {
       try {
         let parsed = JSON.parse(raw);
         if (!Array.isArray(parsed)) {
@@ -507,16 +512,15 @@
         }
         if (!parsed.length) { showUploadError('JSON array is empty'); return; }
         const fields = Object.keys(parsed[0]);
-        csvData = { data: parsed, meta: { fields } };
-        showQuestion();
+        addDataset(fname, parsed, fields);
       } catch (e) { showUploadError('Failed to parse JSON: ' + e.message); }
     }
 
-    function parseDelimited(raw, delimiter) {
+    function parseDelimited(raw, delimiter, fname) {
       Papa.parse(raw, {
         header: true, skipEmptyLines: true, delimiter, complete: res => {
           if (!res.data.length) { showUploadError('File appears empty or could not be parsed'); return; }
-          csvData = res; showQuestion();
+          addDataset(fname, res.data, res.meta.fields);
         }
       });
     }
@@ -526,37 +530,39 @@
     }
 
     function showQuestion() {
-      if (!csvData || !csvData.data || !csvData.meta || !csvData.meta.fields) { alert('No data loaded. Please upload a file first.'); return; }
+      if (!datasets.length) { alert('No data loaded. Please upload a file first.'); return; }
       document.getElementById('upload-sec').style.display = 'none';
       document.getElementById('question-sec').style.display = 'block';
-      document.getElementById('fname').textContent = fName;
-      const rows = csvData.data.length, cols = csvData.meta.fields.length;
-      document.getElementById('fstats').textContent = `${rows.toLocaleString()} rows · ${cols} columns · ${csvData.meta.fields.slice(0, 5).join(', ')}${cols > 5 ? '…' : ''}`;
+      
+      const totalRows = datasets.reduce((sum, d) => sum + d.data.length, 0);
+      document.getElementById('fname').textContent = datasets.length > 1 ? `${datasets.length} Tables Connected` : datasets[0].rawName;
+      document.getElementById('fstats').textContent = `${totalRows.toLocaleString()} total rows across ${datasets.length} dataset(s)`;
+      
       buildPreviewTable();
       setStep(2);
     }
 
     function buildPreviewTable() {
-      const fields = csvData.meta.fields;
-      const rows = csvData.data.slice(0, 8);
+      const fields = datasets[0].meta.fields;
+      const rows = datasets[0].data.slice(0, 8);
       let html = '<table><thead><tr>' + fields.map(f => `<th>${esc(f)}</th>`).join('') + '</tr></thead><tbody>';
       rows.forEach(r => { html += '<tr>' + fields.map(f => `<td>${esc((r[f] ?? '').toString().slice(0, 40))}</td>`).join('') + '</tr>'; });
       html += '</tbody></table>';
       document.getElementById('preview-table-wrap').innerHTML = html;
-      document.getElementById('preview-count').textContent = `Showing 8 of ${csvData.data.length} rows`;
+      document.getElementById('preview-count').textContent = `Showing 8 of ${datasets[0].data.length} rows`;
     }
 
     // ── Full data table with filter ──
     function buildFullDataTable(rows) {
-      const fields = csvData.meta.fields;
+      const fields = datasets[0].meta.fields;
       // Populate filter column dropdown
       const fc = document.getElementById('filter-col');
       fc.innerHTML = '<option value="">— All columns —</option>' + fields.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
-      renderDataTable(rows || csvData.data);
+      renderDataTable(rows || datasets[0].data);
     }
 
     function renderDataTable(rows) {
-      const fields = csvData.meta.fields;
+      const fields = datasets[0].meta.fields;
       const display = rows.slice(0, 500);
       let html = '<table><thead><tr>' + fields.map(f => `<th>${esc(f)}</th>`).join('') + '</tr></thead><tbody>';
       display.forEach(r => { html += '<tr>' + fields.map(f => `<td>${esc((r[f] ?? '').toString().slice(0, 60))}</td>`).join('') + '</tr>'; });
@@ -568,8 +574,8 @@
     function applyFilter() {
       const col = document.getElementById('filter-col').value;
       const val = document.getElementById('filter-val').value.toLowerCase();
-      if (!col && !val) { renderDataTable(csvData.data); return; }
-      const filtered = csvData.data.filter(r => {
+      if (!col && !val) { renderDataTable(datasets[0].data); return; }
+      const filtered = datasets[0].data.filter(r => {
         if (col && val) return (r[col] ?? '').toString().toLowerCase().includes(val);
         if (val) return Object.values(r).some(v => (v ?? '').toString().toLowerCase().includes(val));
         return true;
@@ -579,13 +585,13 @@
     function clearFilter() {
       document.getElementById('filter-col').value = '';
       document.getElementById('filter-val').value = '';
-      renderDataTable(csvData.data);
+      renderDataTable(datasets[0].data);
     }
 
     // ── Column stats ──
     function buildColStats() {
-      const fields = csvData.meta.fields;
-      const rows = csvData.data;
+      const fields = datasets[0].meta.fields;
+      const rows = datasets[0].data;
       let html = '<table><thead><tr><th>Column</th><th>Type</th><th>Non-null</th><th>Unique</th><th>Min/Max or Sample</th></tr></thead><tbody>';
       fields.forEach(f => {
         const vals = rows.map(r => r[f] ?? '').filter(v => v !== '' && v !== null && v !== undefined);
@@ -639,7 +645,7 @@
       const q = document.getElementById('qi').value.trim();
       if (!q) { alert('Please enter a question about your data'); return; }
       if (!apiKey) { alert('Please enter and save your Groq API key first'); return; }
-      if (!csvData || !csvData.data || !csvData.meta) { alert('No data loaded. Please upload a file first.'); return; }
+      if (!datasets.length) { alert('No data loaded. Please upload a file first.'); return; }
       lastQ = q;
       document.getElementById('question-sec').style.display = 'none';
       document.getElementById('load-sec').style.display = 'block';
@@ -656,16 +662,16 @@
       }, 1800);
 
       try {
-        const fields = csvData.meta.fields;
-        const sample = csvData.data.slice(0, 100);
+        const fields = datasets[0].meta.fields;
+        const sample = datasets[0].data.slice(0, 100);
         const sampleLines = [fields.join(','), ...sample.map(r => fields.map(f => (r[f] ?? '').toString().replace(/,/g, ';')).join(','))].join('\n');
 
         alasql('DROP TABLE IF EXISTS DataTbl');
         alasql('CREATE TABLE DataTbl');
-        alasql.tables.DataTbl.data = csvData.data;
+        alasql.tables.DataTbl.data = datasets[0].data;
 
         const prompt = `You are a senior BI data analyst.
-Dataset File: ${fName} | Total rows: ${csvData.data.length} | Columns: ${fields.join(', ')}
+Dataset File: ${fName} | Total rows: ${datasets[0].data.length} | Columns: ${fields.join(', ')}
 
 Sample data (up to 100 rows):
 ${sampleLines}
@@ -783,7 +789,7 @@ Rules:
       document.getElementById('r-question-display').textContent = 'Q: ' + lastQ;
 
       // Build full data table
-      buildFullDataTable(csvData.data);
+      buildFullDataTable(datasets[0].data);
       buildColStats();
 
       // KPI cards
@@ -881,9 +887,9 @@ Rules:
 
     // ── Export ──
     function exportCSV() {
-      if (!csvData || !csvData.meta || !csvData.meta.fields) return;
-      const fields = csvData.meta.fields;
-      const rowStrs = csvData.data.map(r => fields.map(f => `"${(r[f] ?? '').toString().replace(/"/g, '""')}"`).join(','));
+      if (!csvData || !csvData.meta || !datasets[0].meta.fields) return;
+      const fields = datasets[0].meta.fields;
+      const rowStrs = datasets[0].data.map(r => fields.map(f => `"${(r[f] ?? '').toString().replace(/"/g, '""')}"`).join(','));
       rowStrs.unshift(fields.join(','));
       const rows = rowStrs.join('\n');
       const a = document.createElement('a');
@@ -896,7 +902,7 @@ Rules:
 
     // ── Reset ──
     function resetApp() {
-      csvData = null; fName = ''; lastQ = '';
+      datasets = []; document.getElementById('staging-area').style.display = 'none'; document.getElementById('staged-list').innerHTML = ''; fName = ''; lastQ = '';
       charts.forEach(c => c.destroy()); charts = [];
       ['upload-sec', 'question-sec', 'load-sec', 'results-sec'].forEach(id => {
         const el = document.getElementById(id);
