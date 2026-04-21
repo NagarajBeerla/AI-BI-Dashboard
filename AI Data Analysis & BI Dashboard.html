@@ -695,7 +695,7 @@ Rules:
 - You must write SQL for key_stats and charts!
 - Table name is exactly: DataTbl
 - key_stats SQL MUST return 1 row with a column named 'result'. Limit to 4-6 KPIs.
-- charts SQL MUST return multiple rows with exactly 2 columns: 'label' (string) and 'value' (number). Limit to 3-4 charts. (types: bar/line/doughnut/radar/pie/scatter/polarArea).
+- charts SQL MUST return multiple rows with exactly 2 columns. For bar/line/pie/doughnut/radar/polarArea: 'label' (string) and 'value' (number). For scatter: 'label' (numeric X) and 'value' (numeric Y). Limit to 3-4 charts.
 - If column names have spaces, wrap them like [My Column].`;
 
         const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -748,8 +748,13 @@ Rules:
             try {
               const r = alasql(ch.sql);
               if (r && r.length) {
-                ch.labels = r.map(row => row.label);
-                ch.datasets = [{ label: 'Value', data: r.map(row => row.value) }];
+                if (ch.type === 'scatter') {
+                  ch.labels = []; // no discrete X axis
+                  ch.datasets = [{ label: 'Distribution', data: r.map(row => ({ x: parseFloat(row.label), y: parseFloat(row.value) })).filter(pt => !isNaN(pt.x) && !isNaN(pt.y)) }];
+                } else {
+                  ch.labels = r.map(row => row.label);
+                  ch.datasets = [{ label: 'Value', data: r.map(row => row.value) }];
+                }
               } else {
                 ch.labels = []; ch.datasets = [];
               }
@@ -811,7 +816,10 @@ Rules:
 
       (res.charts || []).forEach((ch, idx) => {
         const isHoriz = ch.type === 'bar' && ch.labels && ch.labels.length > 7;
-        const h = ch.type === 'doughnut' ? 320 : isHoriz ? Math.max(300, ch.labels.length * 40 + 60) : 300;
+        const isCircular = ch.type === 'doughnut' || ch.type === 'pie' || ch.type === 'polarArea';
+        const isScatter = ch.type === 'scatter';
+        const h = isCircular ? 340 : isHoriz ? Math.max(300, ch.labels.length * 40 + 60) : 320;
+        
         const wrap = document.createElement('div');
         wrap.className = 'chart-card fade-in';
         wrap.style.animationDelay = (idx * 0.1) + 's';
@@ -820,19 +828,18 @@ Rules:
 
         const datasets = (ch.datasets || []).map((ds, di) => ({
           ...ds,
-          backgroundColor: ch.type === 'doughnut' ? (ch.labels || []).map((_, li) => PAL[li % PAL.length] + 'cc')
+          backgroundColor: isCircular ? (ch.labels || []).map((_, li) => PAL[li % PAL.length] + 'cc')
             : ch.type === 'line' ? PAL[di % PAL.length] + '28' : PAL[di % PAL.length] + 'cc',
-          borderColor: ch.type === 'doughnut' ? 'rgba(255,255,255,0.15)' : PAL[di % PAL.length],
-          borderWidth: ch.type === 'doughnut' ? 2 : 2,
+          borderColor: isCircular ? 'rgba(255,255,255,0.05)' : PAL[di % PAL.length],
+          borderWidth: isCircular ? 2 : 2,
           fill: ch.type === 'line', tension: 0.4,
-          pointRadius: ch.type === 'line' ? 4 : 0,
-          pointBackgroundColor: PAL[di % PAL.length],
+          pointRadius: ch.type === 'line' || isScatter ? 5 : 0,
+          pointBackgroundColor: isScatter ? PAL[di % PAL.length] + 'cc' : PAL[di % PAL.length],
           pointBorderColor: '#fff', pointBorderWidth: 1.5
         }));
 
-        const isDark = darkMode;
-        const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-        const tickColor = isDark ? '#5a6280' : '#7a85a8';
+        const gridColor = 'rgba(255,255,255,0.06)';
+        const tickColor = '#7a85a8';
 
         const c = new Chart(document.getElementById('ch' + idx), {
           type: isHoriz ? 'bar' : ch.type,
@@ -842,17 +849,25 @@ Rules:
             indexAxis: isHoriz ? 'y' : 'x',
             plugins: {
               legend: {
-                display: ch.type === 'doughnut' || (ch.datasets || []).length > 1, position: ch.type === 'doughnut' ? 'right' : 'bottom',
-                labels: { padding: 16, font: { size: 11, family: "'Inter',sans-serif" }, usePointStyle: true, pointStyleWidth: 8, color: tickColor }
+                display: isCircular || isScatter || (ch.datasets || []).length > 1, 
+                position: isCircular ? 'right' : 'bottom',
+                labels: { padding: 16, font: { size: 12, family: "'Inter',sans-serif" }, usePointStyle: true, pointStyleWidth: 8, color: tickColor }
               },
               tooltip: {
-                backgroundColor: isDark ? '#1a1e29' : '#fff', titleColor: isDark ? '#e8eaf0' : '#1a1e2e', bodyColor: tickColor,
-                borderColor: isDark ? '#2a3045' : '#cdd3e5', borderWidth: 1, padding: 10, cornerRadius: 8
+                backgroundColor: '#1a1e29', titleColor: '#e8eaf0', bodyColor: tickColor,
+                borderColor: '#2a3045', borderWidth: 1, padding: 12, cornerRadius: 8
               }
             },
-            scales: ch.type === 'doughnut' ? {} : {
-              x: { grid: { color: gridColor, drawBorder: false }, ticks: { font: { size: 11 }, color: tickColor, maxRotation: 40 } },
-              y: { grid: { color: gridColor, drawBorder: false }, ticks: { font: { size: 11 }, color: tickColor } }
+            scales: isCircular ? {} : {
+              x: { 
+                type: isScatter ? 'linear' : 'category',
+                grid: { color: gridColor, drawBorder: false }, 
+                ticks: { font: { size: 11 }, color: tickColor, maxRotation: 40 } 
+              },
+              y: { 
+                grid: { color: gridColor, drawBorder: false }, 
+                ticks: { font: { size: 11 }, color: tickColor } 
+              }
             }
           }
         });
