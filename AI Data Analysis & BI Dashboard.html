@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI Data Analysis &amp; BI Dashboard</title>
+  <meta name="description"
+    content="Upload CSV, Excel, JSON or TSV — ask a question and get AI-powered BI insights, KPIs and interactive charts.">
+  <link rel="preconnect" href="https://fonts.googleapis.com/">
+  <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alasql@4.2.1/dist/alasql.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --bg2: #13161e;
+      --bg3: #1a1e29;
+      --bg4: #222736;
+      --border: #2a3045;
+      --border2: #353d55;
+      --text: #e8eaf0;
+      --text2: #8b93ab;
+      --text3: #5a6280;
+      --accent: #6c8ef5;
+      --accent2: #4f6ee8;
+      --accent-glow: rgba(108, 142, 245, 0.18);
+      --green: #34c77b;
+      --green-bg: rgba(52, 199, 123, 0.12);
+      --amber: #f5a623;
+      --amber-bg: rgba(245, 166, 35, 0.12);
+      --red: #f56565;
+      --red-bg: rgba(245, 101, 101, 0.12);
+      --purple: #a78bfa;
+      --purple-bg: rgba(167, 139, 250, 0.12);
+      --cyan: #22d3ee;
+      --cyan-bg: rgba(34, 211, 238, 0.12);
+      --radius: 10px;
+      --radius-sm: 6px;
+      --radius-lg: 14px;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+      --font: 'Inter', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg: #f0f2f8;
+      --bg2: #ffffff;
+      --bg3: #e8ecf5;
+      --bg4: #dce1ef;
+      --border: #cdd3e5;
+      --border2: #b8c0d8;
+      --text: #1a1e2e;
+      --text2: #4a5270;
+      --text3: #7a85a8;
+      --accent: #3b5ed4;
+      --accent2: #2a4bbf;
+      --accent-glow: rgba(59, 94, 212, 0.12);
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ── Layout ── */
+    .app-shell {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 4rem;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .app-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .app-sub {
+      font-size: 13px;
+      color: var(--text2);
+      margin-top: 2px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      font-family: var(--font);
+      transition: all 0.18s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      box-shadow: 0 2px 12px var(--accent-glow);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text2);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      background: var(--bg3);
+      color: var(--text);
+    }
+
+    .btn-sm {
+      padding: 5px 11px;
+      font-size: 12px;
+    }
+
+    .btn-icon {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: color-mix(in srgb, var(--bg2) 75%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+    }
+
+    /* ── Step bar ── */
+    .step-bar {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+      background: var(--bg2);
+    }
+
+    .step {
+      flex: 1;
+      padding: 10px 6px;
+      font-size: 11px;
+      text-align: center;
+      color: var(--text3);
+      border-right: 1px solid var(--border);
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .step:last-child {
+      border-right: none;
+    }
+
+    .step.active {
+      background: var(--accent-glow);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .step.done {
+      background: var(--green-bg);
+      color: var(--green);
+    }
+
+    /* ── Drop zone ── */
+    .drop-zone {
+      border: 2px dashed var(--border2);
+      border-radius: var(--radius-lg);
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.22s;
+      background: var(--bg2);
+    }
+
+    @keyframes gradient-shift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+      border-color: transparent;
+      background: linear-gradient(270deg, var(--accent-glow), rgba(167, 139, 250, 0.15), var(--cyan-bg), var(--accent-glow));
+      background-size: 200% 200%;
+      animation: gradient-shift 3s ease infinite;
+      transform: scale(1.005);
+    }
+
+    .drop-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      line-height: 1;
+    }
+
+    .drop-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .drop-sub {
+      font-size: 13px;
+      color: var(--text2);
+    }
+
+    .format-badges {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .fmt-badge {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: var(--mono);
+    }
+
+    /* ── API key panel ── */
+    .api-panel {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-top: 1rem;
+    }
+
+    .api-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .api-input {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border2);
+      background: var(--bg2);
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--mono);
+      outline: none;
+    }
+
+    .api-input:focus {
+      border-color: var(--accent);
+    }
+
+    /* ── Metrics grid ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 1rem;
+    }
+
+    .kpi-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+
+    .kpi-accent::before {
+      background: linear-gradient(90deg, var(--accent), var(--purple));
+    }
+
+    .kpi-green::before {
+      background: var(--green);
+    }
+
+    .kpi-amber::before {
+      background: var(--amber);
+    }
+
+    .kpi-red::before {
+      background: var(--red);
+    }
+
+    .kpi-cyan::before {
+      background: var(--cyan);
+    }
+
+    .kpi-label {
+      font-size: 11px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .kpi-value {
+      font-size: 24px;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: var(--text);
+    }
+
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--text2);
+      margin-top: 4px;
+    }
+
+    /* ── Insights ── */
+    .insight-item {
+      display: flex;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .insight-item:last-child {
+      border-bottom: none;
+    }
+
+    .ins-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-top: 9px;
+      flex-shrink: 0;
+    }
+
+    /* ── Data table ── */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 12px;
+    }
+
+    th {
+      background: var(--bg3);
+      color: var(--text2);
+      font-weight: 600;
+      text-align: left;
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      white-space: nowrap;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: var(--bg3);
+    }
+
+    /* ── Chart area ── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .chart-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+    }
+
+    .chart-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 14px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    /* ── Loader ── */
+    .loader-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 4rem 2rem;
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loader-msg {
+      font-size: 14px;
+      color: var(--text2);
+      text-align: center;
+    }
+
+    .loader-step {
+      font-size: 12px;
+      color: var(--text3);
+      font-family: var(--mono);
+      text-align: center;
+    }
+
+    .progress-bar-wrap {
+      width: 260px;
+      height: 4px;
+      background: var(--bg3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--purple));
+      border-radius: 2px;
+      transition: width 0.5s ease;
+      width: 0%;
+    }
+
+    /* ── Badge / Tag ── */
+    .badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    .badge-ok {
+      background: var(--green-bg);
+      color: var(--green);
+    }
+
+    .badge-warn {
+      background: var(--amber-bg);
+      color: var(--amber);
+    }
+
+    .badge-err {
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      background: var(--bg4);
+      border: 1px solid var(--border2);
+      color: var(--text2);
+      margin: 2px;
+      font-weight: 500;
+    }
+
+    /* ── Textarea / Input ── */
+    .textarea {
+      width: 100%;
+      min-height: 82px;
+      box-sizing: border-box;
+      resize: vertical;
+      font-size: 13.5px;
+      font-family: var(--font);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 11px 14px;
+      background: var(--bg3);
+      color: var(--text);
+      outline: none;
+      line-height: 1.55;
+      transition: border-color 0.18s;
+    }
+
+    .textarea:focus {
+      border-color: var(--accent);
+    }
+
+    /* ── Misc ── */
+    .quick-prompts {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .quick-btn {
+      padding: 5px 11px;
+      font-size: 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      border: 1px solid var(--border2);
+      background: var(--bg3);
+      color: var(--text2);
+      font-family: var(--font);
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .quick-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    .section-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 1rem 0;
+    }
+
+    .fade-in {
+      animation: fadeUp 0.35s ease forwards;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .filter-select {
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border2);
+      background: var(--bg3);
+      color: var(--text);
+      font-size: 12px;
+      font-family: var(--font);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .filter-select:focus {
+      border-color: var(--accent);
+    }
+
+    .clean-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text2);
+      padding: 6px 0;
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0;
+    }
+
+    .tab {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text2);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.15s;
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab:hover {
+      color: var(--text);
+    }
+
+    .file-info-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 1rem;
+    }
+
+    .file-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .error-box {
+      background: var(--red-bg);
+      border: 1px solid var(--red);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      color: var(--red);
+      font-size: 13px;
+      margin-top: 1rem;
+    }
+
+    @media(max-width:600px) {
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .app-title {
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-shell">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left">
+        <div class="logo-icon">📊</div>
+        <div>
+          <div class="app-title">AI BI Dashboard</div>
+          <div class="app-sub">Upload any data file · Ask a question · Get instant insights</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-ghost btn-sm btn-icon" id="theme-btn" title="Toggle theme"
+          onclick="toggleTheme()">🌙</button>
+        <button class="btn btn-ghost btn-sm" onclick="showExportMenu()" id="export-btn" style="display:none">⬇
+          Export</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetApp()">↺ Reset</button>
+      </div>
+    </div>
+
+    <!-- Step bar -->
+    <div class="step-bar" id="step-bar">
+      <div class="step active" id="s1">① Upload</div>
+      <div class="step" id="s2">② Question</div>
+      <div class="step" id="s3">③ Cleaning</div>
+      <div class="step" id="s4">④ Analysis</div>
+      <div class="step" id="s5">⑤ Dashboard</div>
+    </div>
+
+    <!-- ── SECTION: Upload ── -->
+    <div id="upload-sec" style="display: block;">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById(&#39;fi&#39;).click()">
+        <input type="file" id="fi" accept=".csv,.xlsx,.xls,.json,.tsv,.txt" style="display:none">
+        <div class="drop-icon">📂</div>
+        <div class="drop-title">Drop your data file here</div>
+        <div class="drop-sub">or click to browse your files</div>
+        <div class="format-badges" style="margin-top:14px;">
+          <span class="fmt-badge" style="background:var(--green-bg);color:var(--green);">CSV</span>
+          <span class="fmt-badge" style="background:var(--accent-glow);color:var(--accent);">XLSX / XLS</span>
+          <span class="fmt-badge" style="background:var(--amber-bg);color:var(--amber);">JSON</span>
+          <span class="fmt-badge" style="background:var(--purple-bg);color:var(--purple);">TSV</span>
+          <span class="fmt-badge" style="background:var(--cyan-bg);color:var(--cyan);">TXT (tab/comma)</span>
+        </div>
+      </div>
+
+      <!-- API Key -->
+      <div class="api-panel">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);">🔑 Groq API Key <span
+            style="color:var(--text3);font-weight:400;">(stored locally in your browser — never sent anywhere except
+            Groq)</span></div>
+        <div class="api-row">
+          <input class="api-input" id="api-key-input" type="password" value="" placeholder="gsk_…" autocomplete="off">
+          <button class="btn btn-ghost btn-sm" onclick="toggleApiVis()">👁</button>
+          <button class="btn btn-primary btn-sm" onclick="saveApiKey()">Save</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearApiKey()" title="Clear stored key">✕ Clear</button>
+        </div>
+        <div id="api-status" style="font-size:11px;color:var(--text3);margin-top:6px;">
+          <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent);">Get a free Groq API key</a> if you don't have one.
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:12px;color:var(--text2);">Try sample data:</span>
+        <button class="quick-btn" onclick="loadSample(&#39;sales&#39;)">📈 Sales data</button>
+        <button class="quick-btn" onclick="loadSample(&#39;employees&#39;)">👥 Employee data</button>
+        <button class="quick-btn" onclick="loadSample(&#39;inventory&#39;)">📦 Inventory data</button>
+      </div>
+      <div id="upload-error"></div>
+    </div>
+
+    <!-- ── SECTION: Question ── -->
+    <div id="question-sec" style="display: none;" class="fade-in">
+      <div class="file-info-bar">
+        <div class="file-icon" id="file-icon-el">📊</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+            id="fname"></div>
+          <div style="font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+            id="fstats"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="resetApp()">Change file</button>
+      </div>
+
+      <!-- Data preview -->
+      <div class="card" id="preview-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div class="card-title" style="margin:0;">Data Preview</div>
+          <span id="preview-count" style="font-size:11px;color:var(--text3);"></span>
+        </div>
+        <div class="table-wrap" id="preview-table-wrap"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Ask a question about your data</div>
+        <textarea class="textarea" id="qi"
+          placeholder="e.g. What are the main trends? Which category performs best? Are there outliers or anomalies?"></textarea>
+        <div style="margin-top:8px;">
+          <span style="font-size:11px;color:var(--text3);">Quick prompts:</span>
+          <div class="quick-prompts">
+            <button class="quick-btn"
+              onclick="setQ(&#39;What are the main trends and patterns in this dataset?&#39;)">Main trends</button>
+            <button class="quick-btn"
+              onclick="setQ(&#39;Which category or segment performs best and worst?&#39;)">Performance</button>
+            <button class="quick-btn"
+              onclick="setQ(&#39;Find outliers, anomalies and interesting patterns&#39;)">Anomalies</button>
+            <button class="quick-btn"
+              onclick="setQ(&#39;Give me a full statistical summary of all numeric columns&#39;)">Statistics</button>
+            <button class="quick-btn"
+              onclick="setQ(&#39;What are the top 5 insights a business executive should know?&#39;)">Executive
+              summary</button>
+            <button class="quick-btn"
+              onclick="setQ(&#39;Show correlations between numeric variables&#39;)">Correlations</button>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:1rem;">
+        <button class="btn btn-primary" style="padding:12px 40px;font-size:15px;" onclick="runAnalysis()">Analyze &amp;
+          Build Dashboard →</button>
+      </div>
+    </div>
+
+    <!-- ── SECTION: Loading ── -->
+    <div id="load-sec" style="display:none;">
+      <div class="loader-wrap">
+        <div class="spinner"></div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div>
+          <div class="loader-msg" id="lmsg"></div>
+          <div class="loader-step" id="lstep"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECTION: Results ── -->
+    <div id="results-sec" style="display:none;" class="fade-in">
+      <div
+        style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:13px;color:var(--text2);" id="r-question-display"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="askFollowUp()">↪ Follow-up</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+          <button class="btn btn-primary btn-sm" onclick="resetApp()">+ New Analysis</button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-bar">
+        <div class="tab active" id="tab-dashboard" onclick="showTab(&#39;dashboard&#39;)">📊 Dashboard</div>
+        <div class="tab" id="tab-data" onclick="showTab(&#39;data&#39;)">🗂 Data Table</div>
+        <div class="tab" id="tab-cleaning" onclick="showTab(&#39;cleaning&#39;)">🧹 Data Quality</div>
+      </div>
+
+      <!-- Tab: Dashboard -->
+      <div id="tab-content-dashboard">
+        <!-- KPI Row -->
+        <div class="kpi-grid" id="kpi-grid"></div>
+        <!-- AI Insights -->
+        <div class="card">
+          <div class="card-title">AI Insights</div>
+          <div id="insights-content"></div>
+        </div>
+        <!-- Charts -->
+        <div class="charts-grid" id="charts-area"></div>
+      </div>
+
+      <!-- Tab: Data Table -->
+      <div id="tab-content-data" style="display:none;">
+        <div class="card" style="padding:1rem;">
+          <div class="filter-row">
+            <span style="font-size:12px;color:var(--text2);">Filter column:</span>
+            <select class="filter-select" id="filter-col" onchange="applyFilter()">
+              <option value="">— All columns —</option>
+            </select>
+            <input class="api-input" id="filter-val" style="max-width:200px;" placeholder="Search value…"
+              oninput="applyFilter()">
+            <button class="btn btn-ghost btn-sm" onclick="clearFilter()">Clear</button>
+            <span style="font-size:11px;color:var(--text3);margin-left:auto;" id="filter-count"></span>
+          </div>
+          <div class="table-wrap" id="data-table-wrap"></div>
+        </div>
+      </div>
+
+      <!-- Tab: Cleaning -->
+      <div id="tab-content-cleaning" style="display:none;">
+        <div class="card">
+          <div class="card-title">Data Quality Report</div>
+          <div id="clean-content"></div>
+        </div>
+        <div class="card" id="col-stats-card">
+          <div class="card-title">Column Statistics</div>
+          <div class="table-wrap" id="col-stats-table"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ── State ──
+    let csvData = null, fName = '', charts = [], lastQ = '', apiKey = '';
+    const PAL = ['#6c8ef5', '#34c77b', '#f5a623', '#f56565', '#a78bfa', '#22d3ee', '#fb7185', '#84cc16', '#f97316', '#06b6d4'];
+    const KPI_COLORS = ['kpi-accent', 'kpi-green', 'kpi-amber', 'kpi-cyan', 'kpi-red', 'kpi-accent'];
+
+    // ── Theme ──
+    let darkMode = true;
+    function toggleTheme() {
+      darkMode = !darkMode;
+      document.documentElement.setAttribute('data-theme', darkMode ? '' : 'light');
+      document.getElementById('theme-btn').textContent = darkMode ? '🌙' : '☀️';
+    }
+
+    // ── API Key ──
+    function saveApiKey() {
+      const v = document.getElementById('api-key-input').value.trim();
+      if (!v) { alert('Enter your Groq API key first'); return; }
+      if (!v.startsWith('gsk_')) {
+        document.getElementById('api-status').innerHTML = '⚠️ Key should start with <code>gsk_</code> — please verify you copied the correct Groq key.';
+        document.getElementById('api-status').style.color = 'var(--amber)';
+      } else {
+        document.getElementById('api-status').textContent = '✅ API key saved for this session';
+        document.getElementById('api-status').style.color = '';
+      }
+      apiKey = v;
+      localStorage.setItem('bi_api_key', v);
+    }
+    function clearApiKey() {
+      apiKey = '';
+      localStorage.removeItem('bi_api_key');
+      document.getElementById('api-key-input').value = '';
+      document.getElementById('api-status').textContent = '🗑 API key cleared. Enter a new key above.';
+      document.getElementById('api-status').style.color = 'var(--text3)';
+    }
+    function toggleApiVis() {
+      const el = document.getElementById('api-key-input');
+      el.type = el.type === 'password' ? 'text' : 'password';
+    }
+    (function loadStoredKey() {
+      const stored = localStorage.getItem('bi_api_key');
+      if (stored) {
+        apiKey = stored;
+        document.getElementById('api-key-input').value = stored;
+        document.getElementById('api-status').textContent = '✅ API key loaded from local storage';
+      }
+    })();
+
+    // ── File Handling ──
+    const dz = document.getElementById('drop-zone');
+    const fi = document.getElementById('fi');
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
+    fi.addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
+
+    function processFile(f) {
+      const n = f.name.toLowerCase();
+      fName = f.name;
+      setFileIcon(n);
+      const r = new FileReader();
+      if (n.endsWith('.xlsx') || n.endsWith('.xls')) {
+        r.onload = e => parseXLSX(e.target.result);
+        r.readAsArrayBuffer(f);
+      } else if (n.endsWith('.json')) {
+        r.onload = e => parseJSON(e.target.result);
+        r.readAsText(f);
+      } else {
+        // CSV, TSV, TXT
+        r.onload = e => parseDelimited(e.target.result, n.endsWith('.tsv') ? '\t' : ',');
+        r.readAsText(f);
+      }
+    }
+
+    function setFileIcon(n) {
+      const icons = { xlsx: '📗', xls: '📗', json: '📋', tsv: '📑', csv: '📊', txt: '📄' };
+      const ext = n.split('.').pop();
+      document.getElementById('file-icon-el').textContent = icons[ext] || '📄';
+    }
+
+    function parseXLSX(buf) {
+      try {
+        const wb = XLSX.read(buf, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        if (!json.length) { showUploadError('Excel sheet appears empty'); return; }
+        csvData = { data: json, meta: { fields: Object.keys(json[0]) } };
+        showQuestion();
+      } catch (e) { showUploadError('Failed to parse Excel: ' + e.message); }
+    }
+
+    function parseJSON(raw) {
+      try {
+        let parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+          // try to find first array in object
+          const arr = Object.values(parsed).find(v => Array.isArray(v));
+          if (arr) parsed = arr;
+          else { showUploadError('JSON must be an array of objects'); return; }
+        }
+        if (!parsed.length) { showUploadError('JSON array is empty'); return; }
+        const fields = Object.keys(parsed[0]);
+        csvData = { data: parsed, meta: { fields } };
+        showQuestion();
+      } catch (e) { showUploadError('Failed to parse JSON: ' + e.message); }
+    }
+
+    function parseDelimited(raw, delimiter) {
+      Papa.parse(raw, {
+        header: true, skipEmptyLines: true, delimiter, complete: res => {
+          if (!res.data.length) { showUploadError('File appears empty or could not be parsed'); return; }
+          csvData = res; showQuestion();
+        }
+      });
+    }
+
+    function showUploadError(msg) {
+      document.getElementById('upload-error').innerHTML = `<div class="error-box">⚠️ ${msg}</div>`;
+    }
+
+    function showQuestion() {
+      if (!csvData || !csvData.data || !csvData.meta || !csvData.meta.fields) { alert('No data loaded. Please upload a file first.'); return; }
+      document.getElementById('upload-sec').style.display = 'none';
+      document.getElementById('question-sec').style.display = 'block';
+      document.getElementById('fname').textContent = fName;
+      const rows = csvData.data.length, cols = csvData.meta.fields.length;
+      document.getElementById('fstats').textContent = `${rows.toLocaleString()} rows · ${cols} columns · ${csvData.meta.fields.slice(0, 5).join(', ')}${cols > 5 ? '…' : ''}`;
+      buildPreviewTable();
+      setStep(2);
+    }
+
+    function buildPreviewTable() {
+      const fields = csvData.meta.fields;
+      const rows = csvData.data.slice(0, 8);
+      let html = '<table><thead><tr>' + fields.map(f => `<th>${esc(f)}</th>`).join('') + '</tr></thead><tbody>';
+      rows.forEach(r => { html += '<tr>' + fields.map(f => `<td>${esc((r[f] ?? '').toString().slice(0, 40))}</td>`).join('') + '</tr>'; });
+      html += '</tbody></table>';
+      document.getElementById('preview-table-wrap').innerHTML = html;
+      document.getElementById('preview-count').textContent = `Showing 8 of ${csvData.data.length} rows`;
+    }
+
+    // ── Full data table with filter ──
+    function buildFullDataTable(rows) {
+      const fields = csvData.meta.fields;
+      // Populate filter column dropdown
+      const fc = document.getElementById('filter-col');
+      fc.innerHTML = '<option value="">— All columns —</option>' + fields.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+      renderDataTable(rows || csvData.data);
+    }
+
+    function renderDataTable(rows) {
+      const fields = csvData.meta.fields;
+      const display = rows.slice(0, 500);
+      let html = '<table><thead><tr>' + fields.map(f => `<th>${esc(f)}</th>`).join('') + '</tr></thead><tbody>';
+      display.forEach(r => { html += '<tr>' + fields.map(f => `<td>${esc((r[f] ?? '').toString().slice(0, 60))}</td>`).join('') + '</tr>'; });
+      html += '</tbody></table>';
+      document.getElementById('data-table-wrap').innerHTML = html;
+      document.getElementById('filter-count').textContent = `${rows.length.toLocaleString()} rows${rows.length > 500 ? ' (showing first 500)' : ''}`;
+    }
+
+    function applyFilter() {
+      const col = document.getElementById('filter-col').value;
+      const val = document.getElementById('filter-val').value.toLowerCase();
+      if (!col && !val) { renderDataTable(csvData.data); return; }
+      const filtered = csvData.data.filter(r => {
+        if (col && val) return (r[col] ?? '').toString().toLowerCase().includes(val);
+        if (val) return Object.values(r).some(v => (v ?? '').toString().toLowerCase().includes(val));
+        return true;
+      });
+      renderDataTable(filtered);
+    }
+    function clearFilter() {
+      document.getElementById('filter-col').value = '';
+      document.getElementById('filter-val').value = '';
+      renderDataTable(csvData.data);
+    }
+
+    // ── Column stats ──
+    function buildColStats() {
+      const fields = csvData.meta.fields;
+      const rows = csvData.data;
+      let html = '<table><thead><tr><th>Column</th><th>Type</th><th>Non-null</th><th>Unique</th><th>Min/Max or Sample</th></tr></thead><tbody>';
+      fields.forEach(f => {
+        const vals = rows.map(r => r[f] ?? '').filter(v => v !== '' && v !== null && v !== undefined);
+        const nums = vals.map(v => parseFloat(v)).filter(v => !isNaN(v));
+        const isNum = nums.length > vals.length * 0.6;
+        const uniq = new Set(vals).size;
+        let minmax = '';
+        if (isNum && nums.length) { 
+          let min = nums[0], max = nums[0];
+          for (let i = 1; i < nums.length; i++) {
+            if (nums[i] < min) min = nums[i];
+            if (nums[i] > max) max = nums[i];
+          }
+          minmax = `${min.toLocaleString()} – ${max.toLocaleString()}`; 
+        }
+        else { const samples = Array.from(new Set(vals)).slice(0, 3); minmax = samples.join(', ') + (uniq > 3 ? '…' : ''); }
+        html += `<tr><td style="font-weight:600;">${esc(f)}</td><td><span class="tag">${isNum ? 'numeric' : 'text'}</span></td><td>${vals.length}/${rows.length}</td><td>${uniq}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${esc(minmax)}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('col-stats-table').innerHTML = html;
+    }
+
+    // ── Steps ──
+    function setStep(n) {
+      for (let i = 1; i <= 5; i++) {
+        const el = document.getElementById('s' + i);
+        el.className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
+      }
+    }
+
+    function setQ(q) { document.getElementById('qi').value = q; }
+
+    // ── Tabs ──
+    function showTab(name) {
+      ['dashboard', 'data', 'cleaning'].forEach(t => {
+        document.getElementById('tab-content-' + t).style.display = t === name ? 'block' : 'none';
+        document.getElementById('tab-' + t).className = 'tab' + (t === name ? ' active' : '');
+      });
+    }
+
+    // ── Analysis ──
+    const loadMsgs = [
+      ['Scanning for missing values and duplicates…', 'data-cleaning'],
+      ['Normalizing data types and formats…', 'data-cleaning'],
+      ['Running statistical analysis…', 'analysis'],
+      ['Identifying patterns and correlations…', 'analysis'],
+      ['Generating BI insights and dashboard…', 'visualization']
+    ];
+
+    async function runAnalysis() {
+      const q = document.getElementById('qi').value.trim();
+      if (!q) { alert('Please enter a question about your data'); return; }
+      if (!apiKey) { alert('Please enter and save your Groq API key first'); return; }
+      if (!csvData || !csvData.data || !csvData.meta) { alert('No data loaded. Please upload a file first.'); return; }
+      lastQ = q;
+      document.getElementById('question-sec').style.display = 'none';
+      document.getElementById('load-sec').style.display = 'block';
+      setStep(3);
+
+      let mi = 0;
+      const lm = document.getElementById('lmsg'), ls = document.getElementById('lstep'), pb = document.getElementById('progress-bar');
+      lm.textContent = loadMsgs[0][0]; ls.textContent = loadMsgs[0][1]; pb.style.width = '10%';
+      const iv = setInterval(() => {
+        mi = (mi + 1) % loadMsgs.length;
+        lm.textContent = loadMsgs[mi][0]; ls.textContent = loadMsgs[mi][1];
+        pb.style.width = ((mi + 1) / loadMsgs.length * 90) + '%';
+        setStep(mi < 2 ? 3 : mi < 4 ? 4 : 5);
+      }, 1800);
+
+      try {
+        const fields = csvData.meta.fields;
+        const sample = csvData.data.slice(0, 100);
+        const sampleLines = [fields.join(','), ...sample.map(r => fields.map(f => (r[f] ?? '').toString().replace(/,/g, ';')).join(','))].join('\n');
+
+        alasql('DROP TABLE IF EXISTS DataTbl');
+        alasql('CREATE TABLE DataTbl');
+        alasql.tables.DataTbl.data = csvData.data;
+
+        const prompt = `You are a senior BI data analyst.
+Dataset File: ${fName} | Total rows: ${csvData.data.length} | Columns: ${fields.join(', ')}
+
+Sample data (up to 100 rows):
+${sampleLines}
+
+User question: "${q}"
+
+Return ONLY a raw JSON object with this exact structure — no markdown fences, no extra text:
+{
+  "cleaning_steps": ["up to 4 specific data quality findings from sample"],
+  "insights": ["up to 4 specific business insights to answer the question"],
+  "key_stats": [
+    {
+      "label": "Metric Name",
+      "sql": "SELECT ROUND(SUM(Revenue), 2) AS result FROM DataTbl"
+    }
+  ],
+  "charts": [
+    {
+      "type": "bar",
+      "title": "Descriptive Chart Title",
+      "sql": "SELECT Region AS label, SUM(Revenue) AS value FROM DataTbl GROUP BY Region ORDER BY value DESC"
+    }
+  ]
+}
+
+Rules:
+- You must write SQL for key_stats and charts!
+- Table name is exactly: DataTbl
+- key_stats SQL MUST return 1 row with a column named 'result'. Limit to 4-6 KPIs.
+- charts SQL MUST return multiple rows with exactly 2 columns: 'label' (string) and 'value' (number). Limit to 3-4 charts. (types: bar/line/doughnut/radar/pie/scatter/polarArea).
+- If column names have spaces, wrap them like [My Column].`;
+
+        const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' } })
+        });
+
+        if (!resp.ok) {
+          const errBody = await resp.json().catch(() => ({ error: { message: resp.statusText } }));
+          const status = resp.status;
+          let msg = errBody?.error?.message || 'API error ' + status;
+          if (status === 401) msg = 'Authentication failed (401): Your API key is invalid or expired. Please click "✕ Clear" and enter a valid Groq key starting with gsk_';
+          else if (status === 403) msg = 'Access forbidden (403): Your API key does not have permission to use this model.';
+          else if (status === 404) msg = 'Model not found (404): The requested Groq model is unavailable. Please try again.';
+          else if (status === 429) msg = 'Rate limit exceeded (429): Too many requests. Please wait a moment and try again.';
+          else if (status === 500 || status === 529) msg = 'Groq server error (' + status + '): The API is temporarily unavailable. Please try again shortly.';
+          throw new Error(msg);
+        }
+
+        const d = await resp.json();
+        clearInterval(iv); pb.style.width = '100%';
+
+        const txt = d.choices[0].message.content;
+        let res;
+        try {
+          const c = txt.replace(/```json|```/g, '').trim();
+          const s = c.indexOf('{'), e = c.lastIndexOf('}');
+          res = JSON.parse(c.slice(s, e + 1));
+        } catch (err) { throw new Error('Could not parse AI response. Please try again.'); }
+
+        // Execute SQL for key stats
+        if (res.key_stats) {
+          res.key_stats.forEach(st => {
+            if (!st.sql) return;
+            try {
+              const r = alasql(st.sql);
+              st.value = r && r.length && r[0].result != null ? r[0].result : 'N/A';
+            } catch (e) {
+              st.value = 'Err';
+              console.error('SQL Error on KPI', st.label, ':', st.sql, e);
+            }
+          });
+        }
+        
+        // Execute SQL for charts
+        if (res.charts) {
+          res.charts.forEach(ch => {
+            if (!ch.sql) return;
+            try {
+              const r = alasql(ch.sql);
+              if (r && r.length) {
+                ch.labels = r.map(row => row.label);
+                ch.datasets = [{ label: 'Value', data: r.map(row => row.value) }];
+              } else {
+                ch.labels = []; ch.datasets = [];
+              }
+            } catch (e) {
+               console.error('SQL Error on chart', ch.title, ':', ch.sql, e);
+               ch.labels = []; ch.datasets = [];
+            }
+          });
+        }
+
+        renderResults(res);
+      } catch (err) {
+        clearInterval(iv);
+        document.getElementById('load-sec').style.display = 'none';
+        document.getElementById('question-sec').style.display = 'block';
+        setStep(2);
+        alert('Analysis error: ' + err.message);
+      }
+    }
+
+    function renderResults(res) {
+      document.getElementById('load-sec').style.display = 'none';
+      document.getElementById('results-sec').style.display = 'block';
+      document.getElementById('export-btn').style.display = '';
+      setStep(5);
+      document.getElementById('r-question-display').textContent = 'Q: ' + lastQ;
+
+      // Build full data table
+      buildFullDataTable(csvData.data);
+      buildColStats();
+
+      // KPI cards
+      const kg = document.getElementById('kpi-grid');
+      kg.innerHTML = (res.key_stats || []).map((s, i) =>
+        `<div class="kpi-card ${KPI_COLORS[i % KPI_COLORS.length]}">
+      <div class="kpi-label">${esc(s.label)}</div>
+      <div class="kpi-value">${esc(s.value)}</div>
+    </div>`
+      ).join('');
+
+      // Insights
+      const ic = document.getElementById('insights-content');
+      ic.innerHTML = (res.insights || []).map(ins =>
+        `<div class="insight-item"><div class="ins-dot"></div><div>${esc(ins)}</div></div>`
+      ).join('');
+
+      // Cleaning
+      const cc = document.getElementById('clean-content');
+      const steps = res.cleaning_steps || [];
+      if (!steps.length) {
+        cc.innerHTML = '<div class="clean-item"><span class="badge badge-ok">✓ Clean</span><span style="margin-left:8px;">No significant data quality issues detected.</span></div>';
+      } else {
+        cc.innerHTML = steps.map(s => `<div class="clean-item"><span class="badge badge-warn">noted</span><span style="margin-left:8px;">${esc(s)}</span></div>`).join('');
+      }
+
+      // Charts
+      charts.forEach(c => c.destroy()); charts = [];
+      const ca = document.getElementById('charts-area'); ca.innerHTML = '';
+
+      (res.charts || []).forEach((ch, idx) => {
+        const isHoriz = ch.type === 'bar' && ch.labels && ch.labels.length > 7;
+        const h = ch.type === 'doughnut' ? 320 : isHoriz ? Math.max(300, ch.labels.length * 40 + 60) : 300;
+        const wrap = document.createElement('div');
+        wrap.className = 'chart-card fade-in';
+        wrap.style.animationDelay = (idx * 0.1) + 's';
+        wrap.innerHTML = `<div class="chart-title">${esc(ch.title || 'Chart ' + (idx + 1))}</div><div class="chart-wrap" style="height:${h}px;"><canvas id="ch${idx}" role="img" aria-label="${esc(ch.title || 'chart')}"></canvas></div>`;
+        ca.appendChild(wrap);
+
+        const datasets = (ch.datasets || []).map((ds, di) => ({
+          ...ds,
+          backgroundColor: ch.type === 'doughnut' ? (ch.labels || []).map((_, li) => PAL[li % PAL.length] + 'cc')
+            : ch.type === 'line' ? PAL[di % PAL.length] + '28' : PAL[di % PAL.length] + 'cc',
+          borderColor: ch.type === 'doughnut' ? 'rgba(255,255,255,0.15)' : PAL[di % PAL.length],
+          borderWidth: ch.type === 'doughnut' ? 2 : 2,
+          fill: ch.type === 'line', tension: 0.4,
+          pointRadius: ch.type === 'line' ? 4 : 0,
+          pointBackgroundColor: PAL[di % PAL.length],
+          pointBorderColor: '#fff', pointBorderWidth: 1.5
+        }));
+
+        const isDark = darkMode;
+        const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+        const tickColor = isDark ? '#5a6280' : '#7a85a8';
+
+        const c = new Chart(document.getElementById('ch' + idx), {
+          type: isHoriz ? 'bar' : ch.type,
+          data: { labels: ch.labels, datasets },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            indexAxis: isHoriz ? 'y' : 'x',
+            plugins: {
+              legend: {
+                display: ch.type === 'doughnut' || (ch.datasets || []).length > 1, position: ch.type === 'doughnut' ? 'right' : 'bottom',
+                labels: { padding: 16, font: { size: 11, family: "'Inter',sans-serif" }, usePointStyle: true, pointStyleWidth: 8, color: tickColor }
+              },
+              tooltip: {
+                backgroundColor: isDark ? '#1a1e29' : '#fff', titleColor: isDark ? '#e8eaf0' : '#1a1e2e', bodyColor: tickColor,
+                borderColor: isDark ? '#2a3045' : '#cdd3e5', borderWidth: 1, padding: 10, cornerRadius: 8
+              }
+            },
+            scales: ch.type === 'doughnut' ? {} : {
+              x: { grid: { color: gridColor, drawBorder: false }, ticks: { font: { size: 11 }, color: tickColor, maxRotation: 40 } },
+              y: { grid: { color: gridColor, drawBorder: false }, ticks: { font: { size: 11 }, color: tickColor } }
+            }
+          }
+        });
+        charts.push(c);
+      });
+    }
+
+    function esc(s) {
+      return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ── Export ──
+    function exportCSV() {
+      if (!csvData || !csvData.meta || !csvData.meta.fields) return;
+      const fields = csvData.meta.fields;
+      const rowStrs = csvData.data.map(r => fields.map(f => `"${(r[f] ?? '').toString().replace(/"/g, '""')}"`).join(','));
+      rowStrs.unshift(fields.join(','));
+      const rows = rowStrs.join('\n');
+      const a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(rows);
+      a.download = fName.replace(/\.[^.]+$/, '') + '-cleaned.csv';
+      a.click();
+    }
+
+    function showExportMenu() { exportCSV(); }
+
+    // ── Reset ──
+    function resetApp() {
+      csvData = null; fName = ''; lastQ = '';
+      charts.forEach(c => c.destroy()); charts = [];
+      ['upload-sec', 'question-sec', 'load-sec', 'results-sec'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = id === 'upload-sec' ? 'block' : 'none';
+      });
+      fi.value = '';
+      const qi = document.getElementById('qi'); if (qi) qi.value = '';
+      document.getElementById('upload-error').innerHTML = '';
+      document.getElementById('export-btn').style.display = 'none';
+      setStep(1); showTab('dashboard');
+    }
+
+    // ── Follow-up ──
+    function askFollowUp() {
+      document.getElementById('results-sec').style.display = 'none';
+      document.getElementById('question-sec').style.display = 'block';
+      setStep(2);
+      document.getElementById('qi').value = '';
+      document.getElementById('qi').focus();
+    }
+
+    // ── Sample data ──
+    function loadSample(type) {
+      let raw = '', name = '';
+      if (type === 'sales') {
+        name = 'sample_sales.csv';
+        raw = `Month,Region,Product,Units,Revenue,Cost,Profit
+Jan,North,Widget A,120,4800,2400,2400
+Jan,South,Widget B,85,5100,2550,2550
+Jan,East,Widget A,200,8000,4000,4000
+Jan,West,Widget C,60,3600,1800,1800
+Feb,North,Widget B,140,8400,4200,4200
+Feb,South,Widget A,95,3800,1900,1900
+Feb,East,Widget C,175,10500,5250,5250
+Feb,West,Widget A,110,4400,2200,2200
+Mar,North,Widget C,90,5400,2700,2700
+Mar,South,Widget B,130,7800,3900,3900
+Mar,East,Widget A,220,8800,4400,4400
+Mar,West,Widget B,75,4500,2250,2250
+Apr,North,Widget A,160,6400,3200,3200
+Apr,South,Widget C,100,6000,3000,3000
+Apr,East,Widget B,190,11400,5700,5700
+Apr,West,Widget A,85,3400,1700,1700
+May,North,Widget B,175,10500,5250,5250
+May,South,Widget A,115,4600,2300,2300
+May,East,Widget C,205,12300,6150,6150
+May,West,Widget B,95,5700,2850,2850`;
+      } else if (type === 'employees') {
+        name = 'sample_employees.csv';
+        raw = `EmployeeID,Department,Role,Salary,YearsExp,Satisfaction,Remote,PerformanceScore
+E001,Engineering,Senior Dev,95000,7,4.2,Yes,88
+E002,Marketing,Manager,72000,5,3.8,No,76
+E003,Engineering,Junior Dev,58000,2,4.5,Yes,91
+E004,Sales,Rep,64000,3,3.2,No,70
+E005,HR,Specialist,55000,4,4.1,No,82
+E006,Engineering,Lead,115000,10,4.7,Yes,95
+E007,Marketing,Analyst,62000,3,3.9,Yes,79
+E008,Sales,Manager,88000,8,3.5,No,74
+E009,Engineering,Senior Dev,92000,6,4.0,Yes,86
+E010,HR,Manager,78000,7,4.3,No,83
+E011,Engineering,Junior Dev,55000,1,4.6,Yes,90
+E012,Sales,Rep,61000,2,3.1,No,68
+E013,Marketing,Manager,75000,6,3.7,No,77
+E014,Engineering,Senior Dev,98000,8,4.1,Yes,89
+E015,HR,Specialist,53000,3,4.2,No,81
+E016,Sales,Rep,63000,4,3.4,Yes,71
+E017,Engineering,Lead,120000,12,4.8,Yes,97
+E018,Marketing,Analyst,60000,2,4.0,Yes,80
+E019,Sales,Manager,90000,9,3.6,No,75
+E020,Engineering,Senior Dev,96000,7,4.3,Yes,87`;
+      } else {
+        name = 'sample_inventory.csv';
+        raw = `SKU,Category,Product,StockQty,UnitCost,SellingPrice,Supplier,LastRestock,Sold30Days
+SKU001,Electronics,Laptop 15",45,600,999,TechCorp,2024-03-01,12
+SKU002,Electronics,Wireless Mouse,230,8,25,TechCorp,2024-03-10,85
+SKU003,Office,Desk Chair,18,120,299,FurniCo,2024-02-15,6
+SKU004,Office,Standing Desk,9,250,599,FurniCo,2024-02-20,3
+SKU005,Electronics,Monitor 27",62,220,449,TechCorp,2024-03-05,28
+SKU006,Accessories,USB Hub,310,5,19,AccessCo,2024-03-12,140
+SKU007,Electronics,Keyboard,175,25,75,TechCorp,2024-03-08,65
+SKU008,Office,Whiteboard,34,40,89,FurniCo,2024-02-28,8
+SKU009,Accessories,Webcam,88,30,79,AccessCo,2024-03-01,35
+SKU010,Electronics,Headphones,55,45,129,TechCorp,2024-03-07,22`;
+      }
+      fName = name;
+      setFileIcon(name.toLowerCase());
+      parseDelimited(raw, ',');
+    }
+  </script>
+
+</body>
+
+</html>
