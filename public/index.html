@@ -224,6 +224,27 @@
     .file-icon { width: 42px; height: 42px; border-radius: var(--radius-sm); background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
     .filter-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
     
+    
+    /* Mobile + Toast Additions */
+    @media (max-width: 768px) {
+      .app-layout { flex-direction: column; overflow-y: auto; }
+      .sidebar { width: 100%; height: auto; max-height: none; padding: 1.25rem; border-right: none; border-bottom: 1px solid var(--border); gap: 1rem; }
+      .main-canvas { overflow-y: visible; padding: 1.5rem 1rem; }
+      .step-bar { flex-direction: row; overflow-x: auto; padding-bottom: 10px; }
+      .step { white-space: nowrap; font-size: 13px; padding: 10px; }
+      .file-info-bar { flex-direction: column; align-items: flex-start; }
+      .tab-bar { overflow-x: auto; white-space: nowrap; }
+    }
+    
+    #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+    .toast { background: var(--bg2); border: 1px solid var(--border); color: var(--text); padding: 14px 20px; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; min-width: 250px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); backdrop-filter: blur(12px); animation: fadeLeft 0.3s forwards; }
+    .toast.error { border-left: 4px solid var(--red); }
+    .toast.success { border-left: 4px solid var(--green); }
+    @keyframes fadeLeft { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+    #login-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(20px); }
+    .login-box { background: var(--bg2); padding: 3rem; border-radius: var(--radius-lg); border: 1px solid var(--border2); text-align: center; max-width: 400px; width: 90%; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
+
     /* Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
@@ -232,14 +253,26 @@
   </style>
 </head>
 <body>
+  <div id="toast-container"></div>
+  <div id="login-overlay">
+    <div class="login-box fade-in">
+      <div class="logo-icon" style="margin: 0 auto 20px; width:60px; height:60px; font-size:30px;">📊</div>
+      <h2 style="font-family:var(--font-header);margin-bottom:8px;">Workspace Initialization</h2>
+      <p style="font-size:14px;color:var(--text3);margin-bottom:24px;">Please enter your unified workspace password to access the platform.</p>
+      <input type="password" id="workspace-pass" class="textarea" style="min-height:auto; margin-bottom:16px; font-family:var(--mono);" placeholder="Password" onkeydown="if(event.key==='Enter') verifyLogin()">
+      <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="verifyLogin()">Access Workspace →</button>
+      <div id="login-err" style="color:var(--red);font-size:12px;margin-top:12px;"></div>
+    </div>
+  </div>
+
   <div class="app-layout">
     <!-- Sidebar -->
     <div class="sidebar">
       <div class="header">
         <div class="logo-icon">📊</div>
         <div>
-          <div class="app-title">AI Dashboard</div>
-          <div class="app-sub">Powered by Groq & AlaSQL</div>
+          <div class="app-title">Client Analytics</div>
+          <div class="app-sub">Business Intelligence SaaS</div>
         </div>
       </div>
       
@@ -251,22 +284,7 @@
         <div class="step" id="s5">⑤ Dashboard</div>
       </div>
 
-      <div class="api-panel">
-        <div style="font-size:12px;font-family:var(--font-header);font-weight:600;color:var(--text2);margin-bottom:8px;">🔑 Groq API Key</div>
-        <div style="font-size:11px;color:var(--text3);line-height:1.4;">Stored locally. Fast inference.</div>
-        <div class="api-row">
-          <input class="api-input" id="api-key-input" type="password" value="" placeholder="gsk_…" autocomplete="off">
-          <button class="btn btn-ghost btn-icon" onclick="toggleApiVis()" style="width:34px;flex-shrink:0;">👁</button>
-        </div>
-        <div style="display:flex;gap:6px;margin-top:8px;">
-          <button class="btn btn-primary btn-sm" style="flex:1" onclick="saveApiKey()">Save</button>
-          <button class="btn btn-ghost btn-sm" onclick="clearApiKey()">Clear</button>
-        </div>
-        <div id="api-status" style="font-size:11px;color:var(--text3);margin-top:10px;">
-          <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent);text-decoration:none;">Get free API key</a>
-        </div>
       </div>
-      
       <div style="margin-top:auto; font-size:12px; color:var(--text3); display:flex; justify-content:space-between; align-items:center;">
         <button class="btn btn-ghost btn-sm" onclick="showExportMenu()" id="export-btn" style="display:none">⬇ Export</button>
         <button class="btn btn-ghost btn-sm" onclick="resetApp()">↺ Reset</button>
@@ -303,7 +321,7 @@
           <button class="quick-btn" onclick="loadSample('employees')">👥 Employee data</button>
           <button class="quick-btn" onclick="loadSample('inventory')">📦 Inventory data</button>
         </div>
-        <div id="upload-error"></div>
+        
       </div>
 
       <!-- ── SECTION: Question ── -->
@@ -412,8 +430,37 @@
 
   <script>
 
+    // ── Authentication & Toasts ──
+
+    let saasPass = '';
+    
+    function showToast(msg, type='error') {
+        const cont = document.getElementById('toast-container');
+        const t = document.createElement('div');
+        t.className = 'toast ' + type;
+        t.innerHTML = `<strong>${type === 'error' ? '⚠️ Error' : '✅ Success'}</strong><div style="margin-top:4px;color:var(--text2);">${msg}</div>`;
+        cont.appendChild(t);
+        setTimeout(() => t.remove(), 4000);
+    }
+    
+    function verifyLogin() {
+        const p = document.getElementById('workspace-pass').value;
+        if (!p) return;
+        localStorage.setItem('saas_pass', p);
+        saasPass = p;
+        document.getElementById('login-overlay').style.display = 'none';
+    }
+    
+    (function checkLogin() {
+        const stored = localStorage.getItem('saas_pass');
+        if (stored) {
+            saasPass = stored;
+            document.getElementById('login-overlay').style.display = 'none';
+        }
+    })();
+
     // ── State ──
-    let datasets = [], fName = '', charts = [], lastQ = '', apiKey = '';
+    let datasets = [], fName = '', charts = [], lastQ = '';
     const PAL = ['#6c8ef5', '#34c77b', '#f5a623', '#f56565', '#a78bfa', '#22d3ee', '#fb7185', '#84cc16', '#f97316', '#06b6d4'];
     const KPI_COLORS = ['kpi-accent', 'kpi-green', 'kpi-amber', 'kpi-cyan', 'kpi-red', 'kpi-accent'];
 
@@ -424,40 +471,6 @@
       document.documentElement.setAttribute('data-theme', darkMode ? '' : 'light');
       document.getElementById('theme-btn').textContent = darkMode ? '🌙' : '☀️';
     }
-
-    // ── API Key ──
-    function saveApiKey() {
-      const v = document.getElementById('api-key-input').value.trim();
-      if (!v) { alert('Enter your Groq API key first'); return; }
-      if (!v.startsWith('gsk_')) {
-        document.getElementById('api-status').innerHTML = '⚠️ Key should start with <code>gsk_</code> — please verify you copied the correct Groq key.';
-        document.getElementById('api-status').style.color = 'var(--amber)';
-      } else {
-        document.getElementById('api-status').textContent = '✅ API key saved for this session';
-        document.getElementById('api-status').style.color = '';
-      }
-      apiKey = v;
-      localStorage.setItem('bi_api_key', v);
-    }
-    function clearApiKey() {
-      apiKey = '';
-      localStorage.removeItem('bi_api_key');
-      document.getElementById('api-key-input').value = '';
-      document.getElementById('api-status').textContent = '🗑 API key cleared. Enter a new key above.';
-      document.getElementById('api-status').style.color = 'var(--text3)';
-    }
-    function toggleApiVis() {
-      const el = document.getElementById('api-key-input');
-      el.type = el.type === 'password' ? 'text' : 'password';
-    }
-    (function loadStoredKey() {
-      const stored = localStorage.getItem('bi_api_key');
-      if (stored) {
-        apiKey = stored;
-        document.getElementById('api-key-input').value = stored;
-        document.getElementById('api-status').textContent = '✅ API key loaded from local storage';
-      }
-    })();
 
     // ── File Handling ──
     const dz = document.getElementById('drop-zone');
@@ -526,11 +539,11 @@
     }
 
     function showUploadError(msg) {
-      document.getElementById('upload-error').innerHTML = `<div class="error-box">⚠️ ${msg}</div>`;
+      showToast(msg, 'error');
     }
 
     function showQuestion() {
-      if (!datasets.length) { alert('No data loaded. Please upload a file first.'); return; }
+      if (!datasets.length) { showToast('No data loaded. Please upload a file first.'); return; }
       document.getElementById('upload-sec').style.display = 'none';
       document.getElementById('question-sec').style.display = 'block';
       
@@ -643,9 +656,9 @@
 
     async function runAnalysis() {
       const q = document.getElementById('qi').value.trim();
-      if (!q) { alert('Please enter a question about your data'); return; }
-      if (!apiKey) { alert('Please enter and save your Groq API key first'); return; }
-      if (!datasets.length) { alert('No data loaded. Please upload a file first.'); return; }
+      if (!q) { showToast('Please enter a question about your data'); return; }
+      
+      if (!datasets.length) { showToast('No data loaded. Please upload a file first.'); return; }
       lastQ = q;
       document.getElementById('question-sec').style.display = 'none';
       document.getElementById('load-sec').style.display = 'block';
@@ -704,9 +717,9 @@ Rules:
 - charts SQL MUST return multiple rows with exactly 2 columns. For bar/line/pie/doughnut/radar/polarArea: 'label' (string) and 'value' (number). For scatter: 'label' (numeric X) and 'value' (numeric Y). Limit to 3-4 charts.
 - If column names have spaces, wrap them like [My Column].`;
 
-        const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        const resp = await fetch('/api/analyze', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${saasPass}` },
           body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' } })
         });
 
@@ -714,11 +727,7 @@ Rules:
           const errBody = await resp.json().catch(() => ({ error: { message: resp.statusText } }));
           const status = resp.status;
           let msg = errBody?.error?.message || 'API error ' + status;
-          if (status === 401) msg = 'Authentication failed (401): Your API key is invalid or expired. Please click "✕ Clear" and enter a valid Groq key starting with gsk_';
-          else if (status === 403) msg = 'Access forbidden (403): Your API key does not have permission to use this model.';
-          else if (status === 404) msg = 'Model not found (404): The requested Groq model is unavailable. Please try again.';
-          else if (status === 429) msg = 'Rate limit exceeded (429): Too many requests. Please wait a moment and try again.';
-          else if (status === 500 || status === 529) msg = 'Groq server error (' + status + '): The API is temporarily unavailable. Please try again shortly.';
+if(status === 401) msg = 'Invalid workspace password. Please reload and log in again.';
           throw new Error(msg);
         }
 
@@ -777,7 +786,7 @@ Rules:
         document.getElementById('load-sec').style.display = 'none';
         document.getElementById('question-sec').style.display = 'block';
         setStep(2);
-        alert('Analysis error: ' + err.message);
+        showToast(err.message, 'error');
       }
     }
 
