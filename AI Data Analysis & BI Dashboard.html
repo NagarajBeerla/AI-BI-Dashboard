@@ -1,980 +1,411 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>AI Data Analysis &amp; BI Dashboard</title>
-  <meta name="description"
-    content="Upload CSV, Excel, JSON or TSV — ask a question and get AI-powered BI insights, KPIs and interactive charts.">
+  <title>AI Data Analysis & BI Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com/">
   <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/alasql@4.2.1/dist/alasql.min.js"></script>
   <style>
     :root {
-      --bg: #0d0f14;
-      --bg2: #13161e;
-      --bg3: #1a1e29;
-      --bg4: #222736;
-      --border: #2a3045;
-      --border2: #353d55;
-      --text: #e8eaf0;
-      --text2: #8b93ab;
-      --text3: #5a6280;
-      --accent: #6c8ef5;
-      --accent2: #4f6ee8;
-      --accent-glow: rgba(108, 142, 245, 0.18);
-      --green: #34c77b;
-      --green-bg: rgba(52, 199, 123, 0.12);
-      --amber: #f5a623;
-      --amber-bg: rgba(245, 166, 35, 0.12);
-      --red: #f56565;
-      --red-bg: rgba(245, 101, 101, 0.12);
-      --purple: #a78bfa;
-      --purple-bg: rgba(167, 139, 250, 0.12);
-      --cyan: #22d3ee;
-      --cyan-bg: rgba(34, 211, 238, 0.12);
-      --radius: 10px;
-      --radius-sm: 6px;
-      --radius-lg: 14px;
-      --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+      --bg: #050508;
+      --bg2: rgba(20, 22, 34, 0.45);
+      --bg3: rgba(30, 34, 52, 0.6);
+      --bg4: rgba(45, 50, 75, 0.8);
+      --border: rgba(60, 68, 100, 0.4);
+      --border2: rgba(80, 88, 120, 0.6);
+      --text: #f0f2f5;
+      --text2: #94a3b8;
+      --text3: #64748b;
+      --accent: #00f0ff;
+      --accent2: #ff0055;
+      --accent-glow: rgba(0, 240, 255, 0.2);
+      --green: #10b981;
+      --green-bg: rgba(16, 185, 129, 0.15);
+      --amber: #f59e0b;
+      --amber-bg: rgba(245, 158, 11, 0.15);
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.15);
+      --purple: #8b5cf6;
+      --purple-bg: rgba(139, 92, 246, 0.15);
+      --cyan: #06b6d4;
+      --cyan-bg: rgba(6, 182, 212, 0.15);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-lg: 20px;
       --font: 'Inter', sans-serif;
+      --font-header: 'Outfit', sans-serif;
       --mono: 'JetBrains Mono', monospace;
     }
-
-    [data-theme="light"] {
-      --bg: #f0f2f8;
-      --bg2: #ffffff;
-      --bg3: #e8ecf5;
-      --bg4: #dce1ef;
-      --border: #cdd3e5;
-      --border2: #b8c0d8;
-      --text: #1a1e2e;
-      --text2: #4a5270;
-      --text3: #7a85a8;
-      --accent: #3b5ed4;
-      --accent2: #2a4bbf;
-      --accent-glow: rgba(59, 94, 212, 0.12);
-      --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: var(--font);
       background: var(--bg);
+      background-image: radial-gradient(circle at top right, rgba(0,240,255,0.06) 0%, transparent 40%), radial-gradient(circle at bottom left, rgba(255,0,85,0.06) 0%, transparent 40%);
       color: var(--text);
       min-height: 100vh;
-      transition: background 0.3s, color 0.3s;
-    }
-
-    /* ── Layout ── */
-    .app-shell {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 1.5rem 1.25rem 4rem;
-    }
-
-    .header {
+      overflow: hidden;
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 2rem;
-      gap: 12px;
-      flex-wrap: wrap;
     }
 
-    .header-left {
+    .app-layout { display: flex; width: 100vw; height: 100vh; }
+    .sidebar {
+      width: 290px;
+      background: rgba(10, 11, 16, 0.8);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-right: 1px solid var(--border);
+      padding: 1.75rem;
       display: flex;
-      align-items: center;
-      gap: 14px;
+      flex-direction: column;
+      gap: 2rem;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+    .main-canvas {
+      flex: 1;
+      overflow-y: auto;
+      padding: 3rem 4rem;
+      position: relative;
     }
 
+    .header { display: flex; align-items: center; gap: 14px; }
     .logo-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, var(--accent), var(--purple));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      box-shadow: 0 0 20px var(--accent-glow);
+      width: 44px; height: 44px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; box-shadow: 0 0 24px var(--accent-glow);
     }
+    .app-title { font-family: var(--font-header); font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+    .app-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
 
-    .app-title {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
+    .step-bar { display: flex; flex-direction: column; gap: 8px; }
+    .step {
+      padding: 14px 16px; font-size: 14px;
+      color: var(--text3); border-radius: var(--radius);
+      border: 1px solid transparent; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-weight: 500;
     }
-
-    .app-sub {
-      font-size: 13px;
-      color: var(--text2);
-      margin-top: 2px;
+    .step.active {
+      background: var(--accent-glow); color: var(--accent);
+      border-color: rgba(0,240,255,0.4); font-weight: 600;
+      transform: translateX(6px);
     }
+    .step.done { color: var(--text); border-color: var(--border); background: var(--bg2); }
 
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    .api-panel {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px; margin-top: auto;
     }
-
-    /* ── Buttons ── */
+    .api-row { display: flex; gap: 6px; margin-top: 10px; }
+    .api-input {
+      flex: 1; padding: 10px 12px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border2); background: var(--bg); color: var(--text);
+      font-family: var(--mono); font-size: 12px; outline: none; transition: border 0.3s;
+      width: 10px;
+    }
+    .api-input:focus { border-color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+    
     .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 16px;
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      border: none;
-      font-family: var(--font);
-      transition: all 0.18s;
+      display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px;
+      border-radius: var(--radius-sm); font-size: 13px; font-weight: 500;
+      cursor: pointer; border: none; font-family: var(--font); transition: all 0.2s;
     }
-
     .btn-primary {
       background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #fff;
-      box-shadow: 0 2px 12px var(--accent-glow);
+      color: #fff; box-shadow: 0 4px 16px var(--accent-glow); font-weight: 600;
     }
+    .btn-primary:hover { filter: brightness(1.2); transform: translateY(-2px); }
+    .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--bg3); color: var(--text); }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn-icon { width: 36px; height: 36px; padding: 0; justify-content: center; border-radius: var(--radius-sm); }
 
-    .btn-primary:hover {
-      filter: brightness(1.1);
-      transform: translateY(-1px);
-    }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--text2);
-      border: 1px solid var(--border);
-    }
-
-    .btn-ghost:hover {
-      background: var(--bg3);
-      color: var(--text);
-    }
-
-    .btn-sm {
-      padding: 5px 11px;
-      font-size: 12px;
-    }
-
-    .btn-icon {
-      width: 34px;
-      height: 34px;
-      padding: 0;
-      justify-content: center;
-      border-radius: var(--radius-sm);
-    }
-
-    /* ── Cards ── */
     .card {
-      background: color-mix(in srgb, var(--bg2) 75%, transparent);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 1.25rem 1.5rem;
-      margin-bottom: 1rem;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 1.5rem 2rem;
+      margin-bottom: 1.5rem; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
-
+    .card:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,0,0,0.4); border-color: var(--border2); }
     .card-title {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text3);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 14px;
+      font-family: var(--font-header); font-size: 14px; font-weight: 600;
+      color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;
     }
 
-    /* ── Step bar ── */
-    .step-bar {
-      display: flex;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      margin-bottom: 1.5rem;
-      background: var(--bg2);
-    }
-
-    .step {
-      flex: 1;
-      padding: 10px 6px;
-      font-size: 11px;
-      text-align: center;
-      color: var(--text3);
-      border-right: 1px solid var(--border);
-      transition: all 0.2s;
-      font-weight: 500;
-    }
-
-    .step:last-child {
-      border-right: none;
-    }
-
-    .step.active {
-      background: var(--accent-glow);
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    .step.done {
-      background: var(--green-bg);
-      color: var(--green);
-    }
-
-    /* ── Drop zone ── */
-    .drop-zone {
-      border: 2px dashed var(--border2);
-      border-radius: var(--radius-lg);
-      padding: 3rem 2rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.22s;
-      background: var(--bg2);
-    }
-
-    @keyframes gradient-shift {
+    @keyframes neon-pulse {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
-
-    .drop-zone:hover,
-    .drop-zone.drag-over {
+    .drop-zone {
+      border: 2px dashed var(--border2); border-radius: 24px; padding: 4rem 2rem;
+      text-align: center; cursor: pointer; transition: all 0.3s ease; background: var(--bg2);
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
       border-color: transparent;
-      background: linear-gradient(270deg, var(--accent-glow), rgba(167, 139, 250, 0.15), var(--cyan-bg), var(--accent-glow));
-      background-size: 200% 200%;
-      animation: gradient-shift 3s ease infinite;
-      transform: scale(1.005);
+      background: linear-gradient(270deg, rgba(0,240,255,0.1), rgba(255,0,85,0.1), rgba(6,182,212,0.1));
+      background-size: 200% 200%; animation: neon-pulse 3s ease infinite;
+      transform: scale(1.02); box-shadow: 0 10px 40px rgba(0,240,255,0.1);
     }
+    .drop-icon { font-size: 54px; margin-bottom: 16px; line-height: 1; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+    .drop-title { font-family: var(--font-header); font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+    .drop-sub { font-size: 14px; color: var(--text2); }
+    
+    .format-badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+    .fmt-badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; font-family: var(--mono); }
 
-    .drop-icon {
-      font-size: 48px;
-      margin-bottom: 12px;
-      line-height: 1;
-    }
-
-    .drop-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
-
-    .drop-sub {
-      font-size: 13px;
-      color: var(--text2);
-    }
-
-    .format-badges {
-      display: flex;
-      gap: 6px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-top: 14px;
-    }
-
-    .fmt-badge {
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-      font-family: var(--mono);
-    }
-
-    /* ── API key panel ── */
-    .api-panel {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 12px 14px;
-      margin-top: 1rem;
-    }
-
-    .api-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-top: 8px;
-    }
-
-    .api-input {
-      flex: 1;
-      padding: 8px 12px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border2);
-      background: var(--bg2);
-      color: var(--text);
-      font-size: 13px;
-      font-family: var(--mono);
-      outline: none;
-    }
-
-    .api-input:focus {
-      border-color: var(--accent);
-    }
-
-    /* ── Metrics grid ── */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 12px;
-      margin-bottom: 1rem;
-    }
-
-    .kpi-card {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      position: relative;
-      overflow: hidden;
-      transition: transform 0.2s;
-    }
-
-    .kpi-card:hover {
-      transform: translateY(-2px);
-    }
-
-    .kpi-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-    }
-
-    .kpi-accent::before {
-      background: linear-gradient(90deg, var(--accent), var(--purple));
-    }
-
-    .kpi-green::before {
-      background: var(--green);
-    }
-
-    .kpi-amber::before {
-      background: var(--amber);
-    }
-
-    .kpi-red::before {
-      background: var(--red);
-    }
-
-    .kpi-cyan::before {
-      background: var(--cyan);
-    }
-
-    .kpi-label {
-      font-size: 11px;
-      color: var(--text3);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      margin-bottom: 8px;
-      font-weight: 600;
-    }
-
-    .kpi-value {
-      font-size: 24px;
-      font-weight: 700;
-      font-family: var(--mono);
-      color: var(--text);
-    }
-
-    .kpi-sub {
-      font-size: 11px;
-      color: var(--text2);
-      margin-top: 4px;
-    }
-
-    /* ── Insights ── */
-    .insight-item {
-      display: flex;
-      gap: 10px;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 13.5px;
-      line-height: 1.6;
-      color: var(--text);
-    }
-
-    .insight-item:last-child {
-      border-bottom: none;
-    }
-
-    .ins-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--accent);
-      margin-top: 9px;
-      flex-shrink: 0;
-    }
-
-    /* ── Data table ── */
-    .table-wrap {
-      overflow-x: auto;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-    }
-
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      font-size: 12px;
-    }
-
-    th {
-      background: var(--bg3);
-      color: var(--text2);
-      font-weight: 600;
-      text-align: left;
-      padding: 9px 12px;
-      border-bottom: 1px solid var(--border);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      white-space: nowrap;
-    }
-
-    td {
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text);
-      white-space: nowrap;
-      font-family: var(--mono);
-      font-size: 12px;
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    tr:hover td {
-      background: var(--bg3);
-    }
-
-    /* ── Chart area ── */
-    .charts-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      gap: 1rem;
-      margin-bottom: 1rem;
-    }
-
-    .chart-card {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 1.25rem;
-    }
-
-    .chart-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text3);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      margin-bottom: 14px;
-    }
-
-    .chart-wrap {
-      position: relative;
-      width: 100%;
-    }
-
-    /* ── Loader ── */
-    .loader-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-      padding: 4rem 2rem;
-    }
-
-    .spinner {
-      width: 36px;
-      height: 36px;
-      border: 3px solid var(--border2);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .loader-msg {
-      font-size: 14px;
-      color: var(--text2);
-      text-align: center;
-    }
-
-    .loader-step {
-      font-size: 12px;
-      color: var(--text3);
-      font-family: var(--mono);
-      text-align: center;
-    }
-
-    .progress-bar-wrap {
-      width: 260px;
-      height: 4px;
-      background: var(--bg3);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--purple));
-      border-radius: 2px;
-      transition: width 0.5s ease;
-      width: 0%;
-    }
-
-    /* ── Badge / Tag ── */
-    .badge {
-      font-size: 10px;
-      padding: 2px 8px;
-      border-radius: 20px;
-      font-weight: 600;
-    }
-
-    .badge-ok {
-      background: var(--green-bg);
-      color: var(--green);
-    }
-
-    .badge-warn {
-      background: var(--amber-bg);
-      color: var(--amber);
-    }
-
-    .badge-err {
-      background: var(--red-bg);
-      color: var(--red);
-    }
-
-    .tag {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 20px;
-      font-size: 11px;
-      background: var(--bg4);
-      border: 1px solid var(--border2);
-      color: var(--text2);
-      margin: 2px;
-      font-weight: 500;
-    }
-
-    /* ── Textarea / Input ── */
-    .textarea {
-      width: 100%;
-      min-height: 82px;
-      box-sizing: border-box;
-      resize: vertical;
-      font-size: 13.5px;
-      font-family: var(--font);
-      border: 1px solid var(--border2);
-      border-radius: var(--radius);
-      padding: 11px 14px;
-      background: var(--bg3);
-      color: var(--text);
-      outline: none;
-      line-height: 1.55;
-      transition: border-color 0.18s;
-    }
-
-    .textarea:focus {
-      border-color: var(--accent);
-    }
-
-    /* ── Misc ── */
-    .quick-prompts {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      margin-top: 10px;
-    }
-
+    .quick-prompts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
     .quick-btn {
-      padding: 5px 11px;
-      font-size: 12px;
-      border-radius: 20px;
-      cursor: pointer;
-      border: 1px solid var(--border2);
-      background: var(--bg3);
-      color: var(--text2);
-      font-family: var(--font);
-      font-weight: 500;
-      transition: all 0.15s;
+      padding: 6px 14px; font-size: 12px; border-radius: 20px; cursor: pointer;
+      border: 1px solid var(--border2); background: var(--bg3); color: var(--text2);
+      font-family: var(--font); font-weight: 500; transition: all 0.2s;
     }
+    .quick-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
 
-    .quick-btn:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-      background: var(--accent-glow);
+    .textarea {
+      width: 100%; min-height: 100px; resize: vertical; font-size: 14px; font-family: var(--font);
+      border: 1px solid var(--border2); border-radius: var(--radius); padding: 14px;
+      background: var(--bg); color: var(--text); outline: none; line-height: 1.6; transition: border-color 0.2s;
     }
+    .textarea:focus { border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
 
-    .section-actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      justify-content: flex-end;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 1.5rem; }
+    .kpi-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 20px; position: relative; overflow: hidden; backdrop-filter: blur(12px);
     }
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+    .kpi-accent::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+    .kpi-green::before { background: var(--green); }
+    .kpi-amber::before { background: var(--amber); }
+    .kpi-red::before { background: var(--red); }
+    .kpi-cyan::before { background: var(--cyan); }
+    .kpi-label { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; font-weight: 600; }
+    .kpi-value { font-family: var(--font-header); font-size: 28px; font-weight: 700; color: var(--text); }
 
-    .divider {
-      height: 1px;
-      background: var(--border);
-      margin: 1rem 0;
-    }
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
+    .chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; backdrop-filter: blur(12px); }
+    .chart-wrap { position: relative; width: 100%; }
+    
+    .table-wrap { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    th { background: var(--bg3); color: var(--text2); font-weight: 600; text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 13px; }
+    tr:hover td { background: rgba(0,240,255,0.05); }
 
-    .fade-in {
-      animation: fadeUp 0.35s ease forwards;
-    }
-
-    @keyframes fadeUp {
-      from {
-        opacity: 0;
-        transform: translateY(8px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .filter-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-    }
-
-    .filter-select {
-      padding: 5px 10px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border2);
-      background: var(--bg3);
-      color: var(--text);
-      font-size: 12px;
-      font-family: var(--font);
-      outline: none;
-      cursor: pointer;
-    }
-
-    .filter-select:focus {
-      border-color: var(--accent);
-    }
-
-    .clean-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      font-size: 13px;
-      color: var(--text2);
-      padding: 6px 0;
-    }
-
-    .tab-bar {
-      display: flex;
-      gap: 4px;
-      margin-bottom: 1rem;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 0;
-    }
-
+    .tab-bar { display: flex; gap: 6px; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0; }
     .tab {
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text2);
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
-      transition: all 0.15s;
+      padding: 10px 20px; font-size: 14px; font-weight: 500; font-family: var(--font-header); color: var(--text3);
+      cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; transition: all 0.2s;
     }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); text-shadow: 0 0 12px var(--accent-glow); }
+    .tab:hover:not(.active) { color: var(--text); }
 
-    .tab.active {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
-    }
+    .loader-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; gap: 20px; }
+    .spinner { width: 44px; height: 44px; border: 3px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .progress-bar-wrap { width: 300px; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 3px; transition: width 0.4s ease; width: 0%; }
+    .loader-msg { font-family: var(--font-header); font-size: 18px; color: var(--text); font-weight: 500; }
+    
+    .fade-in { animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-    .tab:hover {
-      color: var(--text);
-    }
+    .insight-item { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); font-size: 14.5px; line-height: 1.6; color: var(--text); }
+    .ins-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: 6px; flex-shrink: 0; box-shadow: 0 0 8px var(--accent); }
 
-    .file-info-bar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 12px 14px;
-      margin-bottom: 1rem;
-    }
-
-    .file-icon {
-      width: 38px;
-      height: 38px;
-      border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-
-    .error-box {
-      background: var(--red-bg);
-      border: 1px solid var(--red);
-      border-radius: var(--radius);
-      padding: 12px 16px;
-      color: var(--red);
-      font-size: 13px;
-      margin-top: 1rem;
-    }
-
-    @media(max-width:600px) {
-      .kpi-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .charts-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .app-title {
-        font-size: 18px;
-      }
-    }
+    .file-info-bar { display: flex; align-items: center; gap: 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 20px; margin-bottom: 1.5rem; }
+    .file-icon { width: 42px; height: 42px; border-radius: var(--radius-sm); background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .filter-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
   </style>
 </head>
-
 <body>
-  <div class="app-shell">
-
-    <!-- Header -->
-    <div class="header">
-      <div class="header-left">
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="header">
         <div class="logo-icon">📊</div>
         <div>
-          <div class="app-title">AI BI Dashboard</div>
-          <div class="app-sub">Upload any data file · Ask a question · Get instant insights</div>
+          <div class="app-title">AI Dashboard</div>
+          <div class="app-sub">Powered by Groq & AlaSQL</div>
         </div>
       </div>
-      <div class="header-right">
-        <button class="btn btn-ghost btn-sm btn-icon" id="theme-btn" title="Toggle theme"
-          onclick="toggleTheme()">🌙</button>
-        <button class="btn btn-ghost btn-sm" onclick="showExportMenu()" id="export-btn" style="display:none">⬇
-          Export</button>
+      
+      <div class="step-bar" id="step-bar">
+        <div class="step active" id="s1">① Upload Data</div>
+        <div class="step" id="s2">② Question</div>
+        <div class="step" id="s3">③ Cleaning</div>
+        <div class="step" id="s4">④ Analysis</div>
+        <div class="step" id="s5">⑤ Dashboard</div>
+      </div>
+
+      <div class="api-panel">
+        <div style="font-size:12px;font-family:var(--font-header);font-weight:600;color:var(--text2);margin-bottom:8px;">🔑 Groq API Key</div>
+        <div style="font-size:11px;color:var(--text3);line-height:1.4;">Stored locally. Fast inference.</div>
+        <div class="api-row">
+          <input class="api-input" id="api-key-input" type="password" value="" placeholder="gsk_…" autocomplete="off">
+          <button class="btn btn-ghost btn-icon" onclick="toggleApiVis()" style="width:34px;flex-shrink:0;">👁</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="saveApiKey()">Save</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearApiKey()">Clear</button>
+        </div>
+        <div id="api-status" style="font-size:11px;color:var(--text3);margin-top:10px;">
+          <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent);text-decoration:none;">Get free API key</a>
+        </div>
+      </div>
+      
+      <div style="margin-top:auto; font-size:12px; color:var(--text3); display:flex; justify-content:space-between; align-items:center;">
+        <button class="btn btn-ghost btn-sm" onclick="showExportMenu()" id="export-btn" style="display:none">⬇ Export</button>
         <button class="btn btn-ghost btn-sm" onclick="resetApp()">↺ Reset</button>
       </div>
     </div>
 
-    <!-- Step bar -->
-    <div class="step-bar" id="step-bar">
-      <div class="step active" id="s1">① Upload</div>
-      <div class="step" id="s2">② Question</div>
-      <div class="step" id="s3">③ Cleaning</div>
-      <div class="step" id="s4">④ Analysis</div>
-      <div class="step" id="s5">⑤ Dashboard</div>
-    </div>
-
-    <!-- ── SECTION: Upload ── -->
-    <div id="upload-sec" style="display: block;">
-      <div class="drop-zone" id="drop-zone" onclick="document.getElementById(&#39;fi&#39;).click()">
-        <input type="file" id="fi" accept=".csv,.xlsx,.xls,.json,.tsv,.txt" style="display:none">
-        <div class="drop-icon">📂</div>
-        <div class="drop-title">Drop your data file here</div>
-        <div class="drop-sub">or click to browse your files</div>
-        <div class="format-badges" style="margin-top:14px;">
-          <span class="fmt-badge" style="background:var(--green-bg);color:var(--green);">CSV</span>
-          <span class="fmt-badge" style="background:var(--accent-glow);color:var(--accent);">XLSX / XLS</span>
-          <span class="fmt-badge" style="background:var(--amber-bg);color:var(--amber);">JSON</span>
-          <span class="fmt-badge" style="background:var(--purple-bg);color:var(--purple);">TSV</span>
-          <span class="fmt-badge" style="background:var(--cyan-bg);color:var(--cyan);">TXT (tab/comma)</span>
+    <!-- Main Canvas -->
+    <div class="main-canvas">
+      <!-- ── SECTION: Upload ── -->
+      <div id="upload-sec" style="display: block;" class="fade-in">
+        <div class="card" style="padding:4rem 2rem;">
+          <div class="drop-zone" id="drop-zone" onclick="document.getElementById('fi').click()">
+            <input type="file" id="fi" accept=".csv,.xlsx,.xls,.json,.tsv,.txt" style="display:none">
+            <div class="drop-icon">📂</div>
+            <div class="drop-title">Drop your data file here</div>
+            <div class="drop-sub">Drag and drop or click to browse</div>
+            <div class="format-badges">
+              <span class="fmt-badge" style="background:var(--green-bg);color:var(--green);">CSV</span>
+              <span class="fmt-badge" style="background:var(--accent-glow);color:var(--accent);">XLSX / XLS</span>
+              <span class="fmt-badge" style="background:var(--amber-bg);color:var(--amber);">JSON</span>
+            </div>
+          </div>
         </div>
+
+        <div class="card" style="display:flex;gap:12px;align-items:center;margin-top:1.5rem;">
+          <span style="font-size:13px;font-family:var(--font-header);font-weight:600;color:var(--text2);">Try sample data:</span>
+          <button class="quick-btn" onclick="loadSample('sales')">📈 Sales data</button>
+          <button class="quick-btn" onclick="loadSample('employees')">👥 Employee data</button>
+          <button class="quick-btn" onclick="loadSample('inventory')">📦 Inventory data</button>
+        </div>
+        <div id="upload-error"></div>
       </div>
 
-      <!-- API Key -->
-      <div class="api-panel">
-        <div style="font-size:12px;font-weight:600;color:var(--text2);">🔑 Groq API Key <span
-            style="color:var(--text3);font-weight:400;">(stored locally in your browser — never sent anywhere except
-            Groq)</span></div>
-        <div class="api-row">
-          <input class="api-input" id="api-key-input" type="password" value="" placeholder="gsk_…" autocomplete="off">
-          <button class="btn btn-ghost btn-sm" onclick="toggleApiVis()">👁</button>
-          <button class="btn btn-primary btn-sm" onclick="saveApiKey()">Save</button>
-          <button class="btn btn-ghost btn-sm" onclick="clearApiKey()" title="Clear stored key">✕ Clear</button>
+      <!-- ── SECTION: Question ── -->
+      <div id="question-sec" style="display: none;" class="fade-in">
+        <div class="file-info-bar">
+          <div class="file-icon" id="file-icon-el">📊</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-family:var(--font-header);font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="fname"></div>
+            <div style="font-size:13px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;" id="fstats"></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="resetApp()">Change file</button>
         </div>
-        <div id="api-status" style="font-size:11px;color:var(--text3);margin-top:6px;">
-          <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent);">Get a free Groq API key</a> if you don't have one.
+
+        <div class="card" id="preview-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <div class="card-title" style="margin:0;">Data Preview</div>
+            <span id="preview-count" style="font-size:12px;color:var(--text3);"></span>
+          </div>
+          <div class="table-wrap" id="preview-table-wrap"></div>
         </div>
-      </div>
 
-      <div style="display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap;align-items:center;">
-        <span style="font-size:12px;color:var(--text2);">Try sample data:</span>
-        <button class="quick-btn" onclick="loadSample(&#39;sales&#39;)">📈 Sales data</button>
-        <button class="quick-btn" onclick="loadSample(&#39;employees&#39;)">👥 Employee data</button>
-        <button class="quick-btn" onclick="loadSample(&#39;inventory&#39;)">📦 Inventory data</button>
-      </div>
-      <div id="upload-error"></div>
-    </div>
-
-    <!-- ── SECTION: Question ── -->
-    <div id="question-sec" style="display: none;" class="fade-in">
-      <div class="file-info-bar">
-        <div class="file-icon" id="file-icon-el">📊</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-            id="fname"></div>
-          <div style="font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-            id="fstats"></div>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="resetApp()">Change file</button>
-      </div>
-
-      <!-- Data preview -->
-      <div class="card" id="preview-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <div class="card-title" style="margin:0;">Data Preview</div>
-          <span id="preview-count" style="font-size:11px;color:var(--text3);"></span>
-        </div>
-        <div class="table-wrap" id="preview-table-wrap"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Ask a question about your data</div>
-        <textarea class="textarea" id="qi"
-          placeholder="e.g. What are the main trends? Which category performs best? Are there outliers or anomalies?"></textarea>
-        <div style="margin-top:8px;">
-          <span style="font-size:11px;color:var(--text3);">Quick prompts:</span>
-          <div class="quick-prompts">
-            <button class="quick-btn"
-              onclick="setQ(&#39;What are the main trends and patterns in this dataset?&#39;)">Main trends</button>
-            <button class="quick-btn"
-              onclick="setQ(&#39;Which category or segment performs best and worst?&#39;)">Performance</button>
-            <button class="quick-btn"
-              onclick="setQ(&#39;Find outliers, anomalies and interesting patterns&#39;)">Anomalies</button>
-            <button class="quick-btn"
-              onclick="setQ(&#39;Give me a full statistical summary of all numeric columns&#39;)">Statistics</button>
-            <button class="quick-btn"
-              onclick="setQ(&#39;What are the top 5 insights a business executive should know?&#39;)">Executive
-              summary</button>
-            <button class="quick-btn"
-              onclick="setQ(&#39;Show correlations between numeric variables&#39;)">Correlations</button>
+        <div class="card">
+          <div class="card-title">Ask a question about your data</div>
+          <textarea class="textarea" id="qi" placeholder="e.g. What are the main trends? Which region performs best and why? Try to find anomalies."></textarea>
+          <div style="margin-top:12px;">
+            <span style="font-size:12px;color:var(--text3);font-family:var(--font-header);">Quick prompts:</span>
+            <div class="quick-prompts">
+              <button class="quick-btn" onclick="setQ('What are the main trends and patterns in this dataset?')">Main trends</button>
+              <button class="quick-btn" onclick="setQ('Analyze the performance and rank the categories.')">Performance ranking</button>
+              <button class="quick-btn" onclick="setQ('Give me a full statistical summary of all revenue/cost metrics')">Financial metrics</button>
+              <button class="quick-btn" onclick="setQ('What are the top 5 insights a business executive should know?')">Executive summary</button>
+              <button class="quick-btn" onclick="setQ('Show correlations and visualize them with a scatter plot')">Correlations</button>
+            </div>
+          </div>
+          <div style="margin-top:1.5rem;text-align:right;">
+            <button class="btn btn-primary" style="padding:12px 32px;font-size:14px;" onclick="runAnalysis()">Analyze & Build Dashboard →</button>
           </div>
         </div>
       </div>
-      <div style="text-align:center;margin-top:1rem;">
-        <button class="btn btn-primary" style="padding:12px 40px;font-size:15px;" onclick="runAnalysis()">Analyze &amp;
-          Build Dashboard →</button>
-      </div>
-    </div>
 
-    <!-- ── SECTION: Loading ── -->
-    <div id="load-sec" style="display:none;">
-      <div class="loader-wrap">
-        <div class="spinner"></div>
-        <div class="progress-bar-wrap">
-          <div class="progress-bar" id="progress-bar"></div>
-        </div>
-        <div>
-          <div class="loader-msg" id="lmsg"></div>
-          <div class="loader-step" id="lstep"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── SECTION: Results ── -->
-    <div id="results-sec" style="display:none;" class="fade-in">
-      <div
-        style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
-        <div style="font-size:13px;color:var(--text2);" id="r-question-display"></div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-ghost btn-sm" onclick="askFollowUp()">↪ Follow-up</button>
-          <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
-          <button class="btn btn-primary btn-sm" onclick="resetApp()">+ New Analysis</button>
-        </div>
-      </div>
-
-      <!-- Tabs -->
-      <div class="tab-bar">
-        <div class="tab active" id="tab-dashboard" onclick="showTab(&#39;dashboard&#39;)">📊 Dashboard</div>
-        <div class="tab" id="tab-data" onclick="showTab(&#39;data&#39;)">🗂 Data Table</div>
-        <div class="tab" id="tab-cleaning" onclick="showTab(&#39;cleaning&#39;)">🧹 Data Quality</div>
-      </div>
-
-      <!-- Tab: Dashboard -->
-      <div id="tab-content-dashboard">
-        <!-- KPI Row -->
-        <div class="kpi-grid" id="kpi-grid"></div>
-        <!-- AI Insights -->
-        <div class="card">
-          <div class="card-title">AI Insights</div>
-          <div id="insights-content"></div>
-        </div>
-        <!-- Charts -->
-        <div class="charts-grid" id="charts-area"></div>
-      </div>
-
-      <!-- Tab: Data Table -->
-      <div id="tab-content-data" style="display:none;">
-        <div class="card" style="padding:1rem;">
-          <div class="filter-row">
-            <span style="font-size:12px;color:var(--text2);">Filter column:</span>
-            <select class="filter-select" id="filter-col" onchange="applyFilter()">
-              <option value="">— All columns —</option>
-            </select>
-            <input class="api-input" id="filter-val" style="max-width:200px;" placeholder="Search value…"
-              oninput="applyFilter()">
-            <button class="btn btn-ghost btn-sm" onclick="clearFilter()">Clear</button>
-            <span style="font-size:11px;color:var(--text3);margin-left:auto;" id="filter-count"></span>
+      <!-- ── SECTION: Loading ── -->
+      <div id="load-sec" style="display:none;" class="fade-in">
+        <div class="loader-wrap">
+          <div class="spinner"></div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar" id="progress-bar"></div>
           </div>
-          <div class="table-wrap" id="data-table-wrap"></div>
+          <div style="text-align:center;">
+            <div class="loader-msg" id="lmsg"></div>
+            <div style="font-size:13px;color:var(--text3);font-family:var(--mono);margin-top:6px;" id="lstep"></div>
+          </div>
         </div>
       </div>
 
-      <!-- Tab: Cleaning -->
-      <div id="tab-content-cleaning" style="display:none;">
-        <div class="card">
-          <div class="card-title">Data Quality Report</div>
-          <div id="clean-content"></div>
+      <!-- ── SECTION: Results ── -->
+      <div id="results-sec" style="display:none;" class="fade-in">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px;">
+          <div style="font-family:var(--font-header);font-size:18px;font-weight:600;color:var(--text);" id="r-question-display"></div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-ghost btn-sm" onclick="askFollowUp()">↪ Follow-up</button>
+            <button class="btn btn-primary btn-sm" onclick="resetApp()">+ New Analysis</button>
+          </div>
         </div>
-        <div class="card" id="col-stats-card">
-          <div class="card-title">Column Statistics</div>
-          <div class="table-wrap" id="col-stats-table"></div>
+
+        <div class="tab-bar">
+          <div class="tab active" id="tab-dashboard" onclick="showTab('dashboard')">📊 Dashboard</div>
+          <div class="tab" id="tab-data" onclick="showTab('data')">🗂 Data Table</div>
+          <div class="tab" id="tab-cleaning" onclick="showTab('cleaning')">🧹 Data Quality</div>
+        </div>
+
+        <div id="tab-content-dashboard">
+          <div class="kpi-grid" id="kpi-grid"></div>
+          <div class="card">
+            <div class="card-title">AI Insights</div>
+            <div id="insights-content"></div>
+          </div>
+          <div class="charts-grid" id="charts-area"></div>
+        </div>
+
+        <div id="tab-content-data" style="display:none;">
+          <div class="card">
+            <div class="filter-row">
+              <span style="font-size:13px;color:var(--text2);font-family:var(--font-header);">Filter column:</span>
+              <select class="filter-select api-input" id="filter-col" onchange="applyFilter()" style="width:160px;"></select>
+              <input class="api-input" id="filter-val" style="width:220px;" placeholder="Search value…" oninput="applyFilter()">
+              <button class="btn btn-ghost btn-sm" onclick="clearFilter()">Clear</button>
+              <span style="font-size:12px;color:var(--text3);margin-left:auto;" id="filter-count"></span>
+            </div>
+            <div class="table-wrap" id="data-table-wrap"></div>
+          </div>
+        </div>
+
+        <div id="tab-content-cleaning" style="display:none;">
+          <div class="card">
+            <div class="card-title">Data Quality Report</div>
+            <div id="clean-content"></div>
+          </div>
+          <div class="card" id="col-stats-card">
+            <div class="card-title">Column Statistics</div>
+            <div class="table-wrap" id="col-stats-table"></div>
+          </div>
         </div>
       </div>
     </div>
-
   </div>
 
   <script>
+
     // ── State ──
     let csvData = null, fName = '', charts = [], lastQ = '', apiKey = '';
     const PAL = ['#6c8ef5', '#34c77b', '#f5a623', '#f56565', '#a78bfa', '#22d3ee', '#fb7185', '#84cc16', '#f97316', '#06b6d4'];
@@ -1539,8 +970,7 @@ SKU010,Electronics,Headphones,55,45,129,TechCorp,2024-03-07,22`;
       setFileIcon(name.toLowerCase());
       parseDelimited(raw, ',');
     }
+  
   </script>
-
 </body>
-
 </html>
